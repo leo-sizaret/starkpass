@@ -135,8 +135,11 @@ export default function EventsList() {
         setError(error);
         return;
       }
-      const contractIdsPurchased = await res.json();
-      //TODO: use contractIdsPurchased list
+      const contractsWithProofs = await res.json();
+      //TODO: use json {
+      //  'contractIds': contractIds,
+      //  'proofs': proofs
+      //}
     } catch (err) {
       setError(err.message);
     } finally {
