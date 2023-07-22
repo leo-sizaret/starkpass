@@ -7,7 +7,6 @@ trait IEventTrait<T> {
     fn get_balance_of_contract(self: @T) -> u256;
     fn get_attendant(self: @T, attendant: ContractAddress) -> bool;
     fn get_ticket_price(self: @T) -> u256;
-    fn approve(ref self: T, sender: ContractAddress, amount: u256);
     fn transfer_balance_to_organizer(ref self: T);
     fn buy_ticket(ref self: T);
 }
@@ -34,19 +33,11 @@ mod StarkPassEvent {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        PaymentApprovalEvent: PaymentApprovalEvent,
-        TransferEvent: TransferEvent,
+        Transfer: Transfer,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PaymentApprovalEvent {
-        #[key]
-        sender: ContractAddress,
-        amount: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct TransferEvent {
+    struct Transfer {
         #[key]
         sender: ContractAddress,
         recipient: ContractAddress,
@@ -95,18 +86,9 @@ mod StarkPassEvent {
             self.transfer(organizer, amount);
         }
 
-        fn approve(ref self: ContractState, sender: ContractAddress, amount: u256, ) {
-            self.create_erc20_dispatcher().approve(sender, amount);
-            self.emit(Event::PaymentApprovalEvent(
-                PaymentApprovalEvent { sender: sender, amount: amount }
-            ));
-        }
-
         fn buy_ticket(ref self: ContractState) {
             let ticket_price = self.ticket_price.read();
             let sender = get_caller_address();
-            // Approval has to be done from the front-end
-            // self.approve(sender, ticket_price);
 
             self.create_erc20_dispatcher().transferFrom(
                 get_caller_address(),
@@ -135,8 +117,8 @@ mod StarkPassEvent {
             amount: u256
         ) {
             self.create_erc20_dispatcher().transferFrom(sender, recipient, amount);
-            self.emit(Event::TransferEvent(
-                TransferEvent { sender: sender, recipient: recipient, amount: amount }
+            self.emit(Event::Transfer(
+                Transfer { sender: sender, recipient: recipient, amount: amount }
             ));
         }
     }
