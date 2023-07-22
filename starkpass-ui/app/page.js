@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { useCallback, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
-import { connect } from "@argent/get-starknet"
 import { Web3Modal } from "@web3modal/standalone";
 
 import {
@@ -20,10 +19,19 @@ import {
   AuthType,
   ClaimType,
 } from './sismo-connect-config';
+import { truncateAddress } from './services/address-service'
+import {
+  addWalletChangeListener,
+  chainId,
+  connectWallet,
+  removeWalletChangeListener,
+  silentConnectWallet,
+} from './services/wallet-service'
+import { buyTicket } from './services/contract-service';
 
 export default function EventsList() {
-  const [starknet, setStarknet] = useState(undefined);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(true);
+  const [view, changeView] = useState("default");
   const [address, setAddress] = useState("");
 
   const [sismoConnectVerifiedResult, setSismoConnectVerifiedResult] = useState(undefined);
@@ -37,6 +45,7 @@ export default function EventsList() {
   });
 
   const onSignIn = useCallback(async () => {
+    const starknet = await connectWallet()
     if (!starknet) {
       toast("Rejected wallet selection or silent connect found nothing", {
           position: "top-right",
@@ -50,23 +59,15 @@ export default function EventsList() {
       });
     }
 
-    await starknet.enable()
-
-    if(starknet.isConnected) {
-        // If the extension was installed and successfully connected, you have access to a starknet.js Signer object to do all kinds of requests through the user's wallet contract.
-        // starknet.account.execute({ ... })
-        console.log('HELO')
-        console.log(starknet.account)
-    } else {
-        // In case the extension wasn't successfully connected you still have access to a starknet.js Provider to read starknet states and sent anonymous transactions
-        // starknet.provider.callContract( ... )
-    }
+    setAddress(starknet.account.address);
+    changeView("signedIn");
+    setHasInitialized(starknet.isConnected);
   }, [starknet]);
 
-  useEffect(() => {
-    const starknet = connect()
-    setStarknet(starknet)
-  }, []);
+  const onBuyTicket = useCallback(async () => {
+    console.log(address);
+    await buyTicket(address);
+  }, [address]);
 
   // toast('🦄 Auth request successfully approved!', {
   //     position: "top-right",
@@ -78,15 +79,6 @@ export default function EventsList() {
   //     progress: undefined,
   //     theme: "dark",
   // });
-
-  // const [view, changeView] = useState("default");
-
-  useEffect(() => {
-    if (address) {
-      setAddress(starknet.account);
-      // changeView("signedIn");
-    }
-  }, [address]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -154,17 +146,20 @@ export default function EventsList() {
         {/* {view === "default" && ( */}
           <p>
             <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+      <div width="100%" height="100%" className="place-self-end">
+        {view === "default" && (
+          <p className="py-4">
+            <button className="hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 rounded"
                     onClick={onSignIn}
+                    disabled={!hasInitialized}
             >
               Connect a wallet
             </button>
           </p>
-          {/* <button
-            onClick={onSignIn}
-            disabled={!hasInitialized}
-          ></button> */}
-        {/* )} */}
-        {/* {view === "signedIn" && <SignedInView address={address} />} */}
+        )}
+        {view === "signedIn" && (
+          <p className="py-4">Connected: {truncateAddress(address)}</p>
+        )}
       </div>
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
         {/* <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
@@ -203,65 +198,84 @@ export default function EventsList() {
       </div>
 
       <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://www.meetup.com/starknet-london/events/294803596/"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
+        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
+          <a
+            href="https://www.meetup.com/starknet-london/events/294803596/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h2 className={`mb-3 text-2xl font-semibold`}>
             Starknet London Meetup #6: Unveiling StarknetCC Highlights{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
+              <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                -&gt;
+              </span>
+            </h2>
+          </a>
           <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-          July 26, 2023
-          Mark your calendar for the week following ETHCC & StarknetCC as we present the next Starknet London meet-up, proudly hosted by Argent and Nethermind ​​🇬🇧
+            July 26, 2023
+            Mark your calendar for the week following ETHCC & StarknetCC as we present the next Starknet London meet-up, proudly hosted by Argent and Nethermind ​​🇬🇧
           </p>
-          <p>
-            <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded">
-              Button
-            </button>
+          <p className="py-4">
+          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+                  onClick={onBuyTicket}
+          >
+            Buy a ticket
+          </button>
           </p>
-        </a>
+        </div>
 
-        <a
-          href="https://ethglobal.com/events/paris2023"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            ETHGlobal Paris{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
+        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
+          <a
+            href="https://ethglobal.com/events/paris2023"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h2 className={`mb-3 text-2xl font-semibold`}>
+              ETHGlobal Paris{' '}
+              <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                -&gt;
+              </span>
+            </h2>
+          </a>
           <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
             July 21-23, 2023
             Join the ETHGlobal Hackathon in Paris! Bring your laptop and let&apos;s code!
           </p>
-        </a>
-
-        <a
-          href="https://www.meetup.com/starknet-amsterdam/events/294390075/"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Data Analytics on Starknet with Apibara: StarknetNL Workshop #1{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-          JULY 6, 2023
-          Join us on a summer evening for the first Starknet workshop in Amsterdam!
-          ZK-rollups like Starknet create huge amounts of data as they grow. Enter Apibara, an open-source web3 platform to stream and combine on-chain data.
+          <p className="py-4">
+          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+                  onClick={buyTicket}
+          >
+            Buy a ticket
+          </button>
           </p>
-        </a>
+        </div>
+
+        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
+          <a
+            href="https://www.meetup.com/starknet-amsterdam/events/294390075/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h2 className={`mb-3 text-2xl font-semibold`}>
+              Data Analytics on Starknet with Apibara: StarknetNL Workshop #1{' '}
+              <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                -&gt;
+              </span>
+            </h2>
+          </a>
+          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
+            July 6, 2023
+            Join us on a summer evening for the first Starknet workshop in Amsterdam!
+            ZK-rollups like Starknet create huge amounts of data as they grow. Enter Apibara, an open-source web3 platform to stream and combine on-chain data.
+          </p>
+          <p className="py-4">
+          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+                  onClick={buyTicket}
+          >
+            Buy a ticket
+          </button>
+          </p>
+        </div>
       </div>
     </main>
   )
