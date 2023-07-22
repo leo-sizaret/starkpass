@@ -9,7 +9,7 @@ trait IERC20<TContractState> {
     fn balanceOf(self: @TContractState, account: ContractAddress) -> u256;
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256);
-    fn transfer_from(
+    fn transferFrom(
         ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
     );
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256);
@@ -113,7 +113,7 @@ mod erc_20 {
             self.transfer_helper(sender, recipient, amount);
         }
 
-        fn transfer_from(
+        fn transferFrom(
             ref self: ContractState,
             sender: ContractAddress,
             recipient: ContractAddress,
