@@ -9,6 +9,7 @@ trait IEventTrait<T> {
     fn get_ticket_price(self: @T) -> u256;
     fn approve(ref self: T, sender: ContractAddress, amount: u256);
     fn transfer_balance_to_organizer(ref self: T);
+    fn mock_buy_ticket(ref self: T);
     fn buy_ticket(ref self: T);
 }
 
@@ -26,6 +27,7 @@ mod StarkPassEvent {
 
     #[storage]
     struct Storage {
+        event_id: felt252,
         organizer: ContractAddress,
         ticket_price: u256,
         attendees: LegacyMap<ContractAddress, bool>
@@ -57,11 +59,15 @@ mod StarkPassEvent {
 
     // Remember to pass 2 params for u256
     #[constructor]
-    fn constructor(ref self: ContractState, _organizer: ContractAddress, _ticket_price: u256) {
-        // TODO: add an admin function to change the organizer
-        // TODO add an admin function to change the ticket price
+    fn constructor(
+        ref self: ContractState,
+        _organizer: ContractAddress,
+        _ticket_price: u256,
+        _event_id: felt252
+    ) {
         self.organizer.write(_organizer);
         self.ticket_price.write(_ticket_price);
+        self.event_id.write(_event_id);
     }
 
     #[external(v0)]
@@ -97,25 +103,30 @@ mod StarkPassEvent {
 
         fn approve(ref self: ContractState, sender: ContractAddress, amount: u256, ) {
             self.create_erc20_dispatcher().approve(sender, amount);
-            self.emit(Event::PaymentApprovalEvent(
-                PaymentApprovalEvent { sender: sender, amount: amount }
-            ));
+            self
+                .emit(
+                    Event::PaymentApprovalEvent(
+                        PaymentApprovalEvent { sender: sender, amount: amount }
+                    )
+                );
+        }
+
+        fn mock_buy_ticket(ref self: ContractState) {
+            let sender = get_caller_address();
+            self.attendees.write(sender, true);
         }
 
         fn buy_ticket(ref self: ContractState) {
             let ticket_price = self.ticket_price.read();
             let sender = get_caller_address();
-            // Approval has to be done from the front-end
-            // self.approve(sender, ticket_price);
 
-            self.create_erc20_dispatcher().transferFrom(
-                get_caller_address(),
-                get_contract_address(),
-                ticket_price
-            );
+            self
+                .create_erc20_dispatcher()
+                .transferFrom(get_caller_address(), get_contract_address(), ticket_price);
             self.attendees.write(sender, true);
         }
     }
+
 
     #[generate_trait]
     impl PrivateTraitImpl of PrivateTrait {
@@ -135,9 +146,12 @@ mod StarkPassEvent {
             amount: u256
         ) {
             self.create_erc20_dispatcher().transferFrom(sender, recipient, amount);
-            self.emit(Event::TransferEvent(
-                TransferEvent { sender: sender, recipient: recipient, amount: amount }
-            ));
+            self
+                .emit(
+                    Event::TransferEvent(
+                        TransferEvent { sender: sender, recipient: recipient, amount: amount }
+                    )
+                );
         }
     }
 }
