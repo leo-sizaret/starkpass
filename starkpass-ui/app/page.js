@@ -125,8 +125,9 @@ export default function EventsList() {
   const [address, setAddress] = useState("");
 
   // sismo
-  const [loading, setSismoLoading] = useState(false);
-  const [error, setSismoError] = useState();
+  const [sismoLoading, setSismoLoading] = useState(false);
+  const [sismoError, setSismoError] = useState();
+  const [sismoToken, setSismoToken] = useState();
 
   // button events
   var buttonsStatesVar = {}
@@ -144,8 +145,8 @@ export default function EventsList() {
         body: JSON.stringify(response),
       });
       if (!res.ok) {
-        const error = await res.json();
-        setSismoError(error);
+        const sismoError = await res.json();
+        setSismoError(sismoError);
         return;
       }
       const contractsWithProofs = await res.json();
@@ -153,7 +154,8 @@ export default function EventsList() {
       for (let i = 0; i < contractsWithProofs['contractIds'].length; i++) {
         buttonStates[contractsWithProofs['contractIds'][i]] = true;
       }
-
+      
+      setSismoToken(contractsWithProofs['proofs'])
     } catch (err) {
       setSismoError(err.message);
     } finally {
@@ -182,10 +184,15 @@ export default function EventsList() {
     console.log(address);
     //await buyTicket(address);
     
+    //sismoToken has sismo proof.
+    // Need to send to POST https://starkpass-brown.vercel.app/api/events
+    // '{"contractId": "0x00001", "proofs": [], "transactionId": "0x11111"}'
+
     // it is awful but works, sorry
     e.target.innerHTML = 'You are in!!!'
     e.target.onClick = ''
 
+    // Update button states anyways
     const state = buttonStates
     state[e.target.id] = true
     setButtonState(state)
@@ -241,7 +248,7 @@ export default function EventsList() {
             onResponse={(response) => {
               onSismoConnectResponse(response);
             }}
-            verifying={loading}
+            verifying={sismoLoading}
           />
           {view === "default" && (
             <p className="py-4">
