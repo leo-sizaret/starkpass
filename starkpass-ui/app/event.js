@@ -1,7 +1,7 @@
 
 
 function Event(
-    contactId, description, date, title, link, price
+    contactId, description, date, title, link, price, id
 ) {
     this.contactId = contactId;
     this.description = description;
@@ -9,6 +9,7 @@ function Event(
     this.title = title;
     this.link = link;
     this.price = price;
+    this.id = id;
 }
 
 const starknetEvents = [
@@ -19,6 +20,7 @@ const starknetEvents = [
         "Starknet London Meetup #6: Unveiling StarknetCC Highlights",
         'https://www.meetup.com/starknet-london/events/294803596/',
         '0.2 ETH',
+        '1',
     ),
     new Event(
         '0x001',
@@ -27,6 +29,7 @@ const starknetEvents = [
         "ETHGlobal Paris",
         'https://ethglobal.com/events/paris2023',
         '0.5 ETH',
+        '2',
     ),
     new Event(
         '0x002',
@@ -35,6 +38,7 @@ const starknetEvents = [
         "Data Analytics on Starknet with Apibara: StarknetNL Workshop #1",
         'https://www.meetup.com/starknet-amsterdam/events/294390075/',
         '0.1 ETH',
+        '3',
     ),
 ]
 
