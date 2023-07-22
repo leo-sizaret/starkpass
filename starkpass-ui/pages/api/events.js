@@ -4,27 +4,34 @@ import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
-    console.log(req.body)
-    const reqBody = req.body
-    const contractId = reqBody['contractId']
-    const proofs = reqBody['proofs']
-    const transactionId = reqBody['transactionId']
+    const reqBody = req.body;
+    const contractId = reqBody['contractId'];
+    const proofs = reqBody['proofs'];
+    const transactionId = reqBody['transactionId'];
 
-    console.log(proofs)
+    console.log(proofs);
 
     if (transactionId) {
-        const data = await kv.get(contractId);
-        const dataParsed = proofs
+      for (var i = 0; i < proofs.length; i++) {
+        const proofData = proofs[i]['proofData'];
+        const proofDataContracts = await kv.get(proofData);
 
-        if (data) {
-          const dataParsed = data.concat(proofs)
-        }
-        console.log(dataParsed)
+        const proofDataContractsToPush = [{
+          'auths': proofs[i]['auths'],
+          'contractId': contractId,
+        }];
 
-        kv.hset(contractId, dataParsed); 
+        console.log(proofDataContractsToPush);
+
+        if (proofDataContracts) {
+          kv.set(proofData, proofDataContracts.concat(proofDataContractsToPush));
+        } else {
+          kv.set(proofData, proofDataContractsToPush); 
+        } 
+      }
     }
 
-    res.status(200)
-    res.send()
+    res.status(200);
+    res.send();
   } 
 }

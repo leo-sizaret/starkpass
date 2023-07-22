@@ -135,8 +135,8 @@ export default function EventsList() {
         setError(error);
         return;
       }
-      const proofsJson = await res.json();
-      //TODO: store in session
+      const contractIdsPurchased = await res.json();
+      //TODO: use contractIdsPurchased list
     } catch (err) {
       setError(err.message);
     } finally {
