@@ -6,7 +6,7 @@ export const buyTicket = async (
   accountAddress,
 ) => {
     const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
-    const contractAddress = '0x02f8dae6191b2c6584d772019a901feed6f1bcd86f3cc437781c145284c761c8'
+    const contractAddress = '0x03b7fb1d179c58d946e8a93de2edb659977bfddbaae79887cb330819e9317ecc'
 
     const { abi: contractAbi } = await provider.getClassAt(contractAddress);
     console.log(contractAbi)
@@ -24,7 +24,8 @@ export const buyTicket = async (
     //     contractAddress,
     //     parseInputAmountToUint256(transferAmount),
     // )
-    const balance = await ourContract.get_balance()
+    // const balance = ourContract.mock_buy_ticket(accountAddress)
+    const balance = await ourContract.get_balance_of_contract()
     console.log('AAAAAAAAAA ======')
     console.log(balance)
     return balance
@@ -63,14 +64,4 @@ export const getEvents = async () => {
     });
 
     await Promise.all(eventPromises).then(events => console.log(events)).catch(err => { throw Error(err) });
-
-    // TBD
-    // return ourContract.buyTicket(
-    //     contractAddress,
-    //     parseInputAmountToUint256(transferAmount),
-    // )
-    const balance = await ourContract.get_balance()
-    console.log('AAAAAAAAAA ======')
-    console.log(balance)
-    return balance
 }

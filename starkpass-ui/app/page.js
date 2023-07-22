@@ -36,9 +36,9 @@ const sismoConnectConfig = {
   },
 };
 
-// Draws 500 unicorns on the screen when wallet is connected :)
+// Draws 500 astronauts on the screen when wallet is connected :)
 function drawEmojiOnCanvas() {
-  const emoji = ['🦄'];
+  const emoji = ['👨‍🚀', '🚀'];
   const totalEmojiCount = 500;
 
   let continueDraw = false;
@@ -167,7 +167,7 @@ export default function EventsList() {
     // toast('🦄 Auth request successful!');
   }, []);
 
-  const onBuyTicket = useCallback(async () => {
+  const onBuyTicket = useCallback(async address => {
     console.log(address);
     await buyTicket(address);
   }, [address]);
@@ -226,7 +226,7 @@ export default function EventsList() {
           />
           {view === "default" && (
             <p className="py-4">
-              <button className="hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 rounded"
+              <button className="hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border hover:border-transparent border-white-500 rounded"
                       onClick={onSignIn}
                       disabled={!hasInitialized}
               >
@@ -267,7 +267,7 @@ export default function EventsList() {
             {event.description}
           </p>
           <p className="py-4">
-          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
                   onClick={onBuyTicket}>
             Buy a ticket ({event.price})
           </button>
