@@ -25,3 +25,19 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+.sismoConnectButton {
+  height: 41px;
+  border-radius: 0.25rem !important;
+  margin-right: 20px !important;
+}
+
+.emoji-canvas {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  pointer-events: none;
+}
