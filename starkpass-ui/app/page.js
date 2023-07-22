@@ -12,17 +12,16 @@ import {
 import { truncateAddress } from './services/address-service'
 import {
   addWalletChangeListener,
-  chainId,
   connectWallet,
   removeWalletChangeListener,
-  silentConnectWallet,
+  getConnectedWallet,
 } from './services/wallet-service'
-import { buyTicket } from './services/contract-service';
+import { getEvents, buyTicket } from './services/contract-service';
 
-var session = require('express-session')
+const session = require('express-session')
 
 const sismoConnectConfig = {
-  appId: "0x2e4b0b020662622f0fd32d496be3beca",
+  appId: process.env.NEXT_PUBLIC_SISMO_APP_ID,
   vault: {
     // For development purposes insert the identifier that you want to impersonate here
     // Never use this in production
@@ -33,19 +32,19 @@ const sismoConnectConfig = {
   },
 };
 
+// Draws 500 unicorns on the screen when wallet is connected :)
 function drawEmojiOnCanvas() {
-  var emoji = ['🦄'];
-  // var emoji = ['💓','💕','💖','🎀','🌺','🌸']; // theme for #LetLeniLead2022
-  var totalEmojiCount = 500;
+  const emoji = ['🦄'];
+  const totalEmojiCount = 500;
 
-  var continueDraw = false;
-  var context;
-  var canvasWidth;
-  var canvasHeight;
-  var emojies = [];
+  let continueDraw = false;
+  let context = null;
+  let canvasWidth = 0;
+  let canvasHeight = 0;
+  let emojies = [];
 
   function initializeCanvas() {
-    var canvas = document.getElementsByClassName('emoji-canvas')[0];
+    const canvas = document.getElementsByClassName('emoji-canvas')[0];
     context = canvas.getContext( '2d' );
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -56,7 +55,7 @@ function drawEmojiOnCanvas() {
   }
 
   function generateCanvasSize(canvas) {
-    var coord = canvas.getBoundingClientRect();
+    const coord = canvas.getBoundingClientRect();
     canvasWidth = coord.width;
     canvasHeight = coord.height;
   }
@@ -65,10 +64,10 @@ function drawEmojiOnCanvas() {
     if (continueDraw === true) return;
     emojies = [];
     
-    for (var iterate = 0; iterate < totalEmojiCount; iterate++) {
-      var x = Math.floor(Math.random() * canvasWidth);
-      var offsetY = Math.abs(Math.floor(Math.random() * 300));
-      var fontSize = Math.floor(Math.random() * 40) + 20;
+    for (let iterate = 0; iterate < totalEmojiCount; iterate++) {
+      const x = Math.floor(Math.random() * canvasWidth);
+      const offsetY = Math.abs(Math.floor(Math.random() * 300));
+      const fontSize = Math.floor(Math.random() * 40) + 20;
 
       emojies.push({
         emoji: emoji[Math.floor(Math.random() * emoji.length)],
@@ -147,25 +146,53 @@ export default function EventsList() {
     }
   }  
 
-  const onSignIn = useCallback(async () => {
-    const starknet = await connectWallet()
-    if (!starknet) {
-      toast("Rejected wallet selection or silent connect found nothing");
+  const onSignIn = useCallback(() => {
+    async function getWallet () {
+      const wallet = await connectWallet();
+      if (!wallet) {
+        toast("Rejected wallet selection or silent connect found nothing");
+      }
+      drawEmojiOnCanvas()
+      setAddress(wallet.account.address);
+      changeView("signedIn");
+      setHasInitialized(wallet.isConnected);
     }
 
-    drawEmojiOnCanvas()
+    getWallet()
 
     // toast('🦄 Auth request successful!');
-
-    setAddress(starknet.account.address);
-    changeView("signedIn");
-    setHasInitialized(starknet.isConnected);
-  },[]);
+  }, []);
 
   const onBuyTicket = useCallback(async () => {
     console.log(address);
     await buyTicket(address);
   }, [address]);
+
+  useEffect(() => {
+    const handler = async () => {
+      const wallet = await getConnectedWallet();
+      if (!wallet || !wallet.isConnected) {
+        return;
+      }
+  
+      setAddress(wallet.account.address);
+      changeView("signedIn");
+      setHasInitialized(wallet.isConnected);
+
+      const events = await getEvents();
+      console.log('======= EVENTS =======');
+      console.log(events);
+    };
+
+    (async () => {
+      await handler()
+      addWalletChangeListener(handler)
+    })();
+
+    return () => {
+      removeWalletChangeListener(handler)
+    }
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-16">
