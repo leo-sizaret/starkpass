@@ -7,10 +7,10 @@ export const buyTicket = async (
   accountAddress,
 ) => {
     const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
-    const contractAddress = '0x00495882dfebc3fc2411661f1dad74c4d604f91e112ba902e13f7f1ebe2ba3f8'
+    const contractAddress = '0x02f8dae6191b2c6584d772019a901feed6f1bcd86f3cc437781c145284c761c8'
 
-    const { abi: testAbi } = await provider.getClassAt(contractAddress);
-    console.log(testAbi)
+    const { abi: contractAbi } = await provider.getClassAt(contractAddress);
+    console.log(contractAbi)
     // const starknet = getStarknet()
     if (!starknet.isConnected) {
         throw Error("starknet wallet not connected")
@@ -18,7 +18,7 @@ export const buyTicket = async (
 
     console.log(sierraProgram)
 
-    const ourContract = new Contract(testAbi, contractAddress, provider);
+    const ourContract = new Contract(contractAbi, contractAddress, provider);
 
     console.log(ourContract)
 
