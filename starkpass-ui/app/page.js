@@ -1,24 +1,15 @@
 'use client'
 
 import Image from 'next/image'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import { Web3Modal } from "@web3modal/standalone";
-
-import {
-  SismoConnectButton,
-  SismoConnectResponse,
-  SismoConnectVerifiedResult,
-} from '@sismo-core/sismo-connect-react';
-import { useState } from 'react';
-import {
-  CONFIG,
-  AUTHS,
-  CLAIMS,
-  SIGNATURE_REQUEST,
+import { 
+  SismoConnectButton, 
   AuthType,
   ClaimType,
-} from './sismo-connect-config';
+} from '@sismo-core/sismo-connect-react';
+
 import { truncateAddress } from './services/address-service'
 import {
   addWalletChangeListener,
@@ -29,20 +20,51 @@ import {
 } from './services/wallet-service'
 import { buyTicket } from './services/contract-service';
 
+const sismoConnectConfig = {
+  appId: "0x2e4b0b020662622f0fd32d496be3beca",
+  vault: {
+    // For development purposes insert the identifier that you want to impersonate here
+    // Never use this in production
+    impersonate: [
+      "dhadrien.sismo.eth",
+      "telegram:dhadrien",
+    ],
+  },
+};
+
 export default function EventsList() {
   const [hasInitialized, setHasInitialized] = useState(true);
   const [view, changeView] = useState("default");
   const [address, setAddress] = useState("");
 
-  const [sismoConnectVerifiedResult, setSismoConnectVerifiedResult] = useState(undefined);
-  const [sismoConnectResponse, setSismoConnectResponse] = useState(undefined);
-  const [pageState, setPageState] = useState('init');
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState();
   
   const web3Modal = new Web3Modal({
     projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
     walletConnectVersion: 2,
   });
+
+  async function onSismoConnectResponse(response) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/sismo", {
+        method: "POST",
+        body: JSON.stringify(response),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        setError(error);
+        return;
+      }
+      const user = await res.json();
+      setUser(user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }  
 
   const onSignIn = useCallback(async () => {
     const starknet = await connectWallet()
@@ -83,69 +105,25 @@ export default function EventsList() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <ToastContainer />
-      {pageState == "init" ? (
-          <>
-            <SismoConnectButton
-              config={CONFIG}
-              // Auths = Data Source Ownership Requests. (e.g Wallets, Github, Twitter, Github)
-              auths={AUTHS}
-              // Claims = prove group membership of a Data Source in a specific Data Group.
-              // (e.g ENS DAO Voter, Minter of specific NFT, etc.)
-              // Data Groups = [{[dataSource1]: value1}, {[dataSource1]: value1}, .. {[dataSource]: value}]
-              // Existing Data Groups and how to create one: https://factory.sismo.io/groups-explorer
-              claims={CLAIMS}
-              // Signature = user can sign a message embedded in their zk proof
-              signature={SIGNATURE_REQUEST}
-              text="Prove With Sismo"
-              // Triggered when received Sismo Connect response from user data vault
-              onResponse={async (response) => {
-                setSismoConnectResponse(response);
-                setPageState("verifying");
-                const verifiedResult = await fetch("/api/verify", {
-                  method: "POST",
-                  body: JSON.stringify(response),
-                });
-                const data = await verifiedResult.json();
-                if (verifiedResult.ok) {
-                  setSismoConnectVerifiedResult(data);
-                  setPageState("verified");
-                } else {
-                  setPageState("error");
-                  setError(data);
-                }
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => {
-                window.location.href = "/";
-              }}
-            >
-              {" "}
-              RESET{" "}
-            </button>
-            <br></br>
-            <div className="status-wrapper">
-              {pageState == "verifying" ? (
-                <span className="verifying"> Verifying ZK Proofs... </span>
-              ) : (
-                <>
-                  {Boolean(error) ? (
-                    <span className="error"> Error verifying ZK Proofs: {error} </span>
-                  ) : (
-                    <span className="verified"> ZK Proofs verified!</span>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        )}
-      <div width="100%" height="100%">
-        {/* {view === "default" && ( */}
-          <p>
-            <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded"
+      
+      <SismoConnectButton
+        // the client config created
+        config={sismoConnectConfig}
+        // the auth request we want to make
+        // here we want the proof of a Sismo Vault ownership from our users
+        auths={[
+          { authType: AuthType.VAULT },
+          { authType: AuthType.TELEGRAM },
+        ]}
+        // we ask the user to sign a message
+        signature={{ message: "Sign to get a ticket", isSelectableByUser: true }}
+        // onResponseBytes calls a 'setResponse' function with the responseBytes returned by the Sismo Vault
+        onResponse={(response) => {
+          onSismoConnectResponse(response);
+        }}
+        verifying={loading}
+      />
+
       <div width="100%" height="100%" className="place-self-end">
         {view === "default" && (
           <p className="py-4">
