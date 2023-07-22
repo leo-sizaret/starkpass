@@ -1,129 +1,132 @@
-'use client'
-
 import Image from 'next/image'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import AuthClient, { generateNonce } from "@walletconnect/auth-client";
-import { Web3Modal } from "@web3modal/standalone";
+// import { Web3Modal } from "@web3modal/standalone";
 
 export default function EventsList() {
-  const [client, setClient] = useState(undefined);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const [uri, setUri] = useState("");
-  const [address, setAddress] = useState("");
+  // const [client, setClient] = useState(undefined);
+  // const [hasInitialized, setHasInitialized] = useState(false);
+  // const [uri, setUri] = useState("");
+  // const [address, setAddress] = useState("");
 
-  const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
-  console.log('==========')
-  console.log(projectId)
+  // const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
+  // console.log('==========')
+  // console.log(projectId)
   
-  const web3Modal = new Web3Modal({
-    projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
-    walletConnectVersion: 2,
-  });
+  // const web3Modal = new Web3Modal({
+  //   projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+  //   walletConnectVersion: 2,
+  // });
 
-  const onSignIn = useCallback(() => {
-    if (!client) return;
-    client
-      .request({
-        aud: window.location.href,
-        domain: window.location.hostname.split(".").slice(-2).join("."),
-        chainId: "eip155:1",
-        type: "eip4361",
-        nonce: generateNonce(),
-        statement: "Sign in with wallet.",
-      })
-      .then(({ uri }) => {
-        if (uri) {
-          setUri(uri);
-        }
-      });
-  }, [client, setUri]);
+  // const onSignIn = useCallback(() => {
+  //   if (!client) return;
+  //   client
+  //     .request({
+  //       aud: window.location.href,
+  //       domain: window.location.hostname.split(".").slice(-2).join("."),
+  //       chainId: "eip155:1",
+  //       type: "eip4361",
+  //       nonce: generateNonce(),
+  //       statement: "Sign in with wallet.",
+  //     })
+  //     .then(({ uri }) => {
+  //       if (uri) {
+  //         setUri(uri);
+  //       }
+  //     });
+  // }, [client, setUri]);
 
-  useEffect(() => {
-    AuthClient.init({
-      relayUrl: process.env.NEXT_PUBLIC_RELAY_URL,
-      projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
-      metadata: {
-        name: "react-dapp-auth",
-        description: "React Example Dapp for Auth",
-        url: window.location.host,
-        icons: [],
-      },
-    })
-      .then((authClient) => {
-        setClient(authClient);
-        setHasInitialized(true);
-      })
-      .catch(console.error);
-  }, []);
+  // useEffect(() => {
+  //   AuthClient.init({
+  //     relayUrl: process.env.NEXT_PUBLIC_RELAY_URL,
+  //     projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+  //     metadata: {
+  //       name: "react-dapp-auth",
+  //       description: "React Example Dapp for Auth",
+  //       url: window.location.host,
+  //       icons: [],
+  //     },
+  //   })
+  //     .then((authClient) => {
+  //       setClient(authClient);
+  //       setHasInitialized(true);
+  //     })
+  //     .catch(console.error);
+  // }, []);
 
-  useEffect(() => {
-    if (!client) return;
-    client.on("auth_response", ({ params }) => {
-      if ("code" in params) {
-        console.error(params);
-        return web3Modal.closeModal();
-      }
-      if ("error" in params) {
-        console.error(params.error);
-        if ("message" in params.error) {
-          toast(params.error.message, {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "dark",
-        });
-        }
-        return web3Modal.closeModal();
-      }
-      toast('🦄 Auth request successfully approved!', {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "dark",
-      });
-      setAddress(params.result.p.iss.split(":")[4]);
-    });
-  }, [client]);
+  // useEffect(() => {
+  //   if (!client) return;
+  //   client.on("auth_response", ({ params }) => {
+  //     if ("code" in params) {
+  //       console.error(params);
+  //       return web3Modal.closeModal();
+  //     }
+  //     if ("error" in params) {
+  //       console.error(params.error);
+  //       if ("message" in params.error) {
+  //         toast(params.error.message, {
+  //           position: "top-right",
+  //           autoClose: 5000,
+  //           hideProgressBar: false,
+  //           closeOnClick: true,
+  //           pauseOnHover: true,
+  //           draggable: true,
+  //           progress: undefined,
+  //           theme: "dark",
+  //       });
+  //       }
+  //       return web3Modal.closeModal();
+  //     }
+  //     toast('🦄 Auth request successfully approved!', {
+  //         position: "top-right",
+  //         autoClose: 5000,
+  //         hideProgressBar: false,
+  //         closeOnClick: true,
+  //         pauseOnHover: true,
+  //         draggable: true,
+  //         progress: undefined,
+  //         theme: "dark",
+  //     });
+  //     setAddress(params.result.p.iss.split(":")[4]);
+  //   });
+  // }, [client]);
 
-  const [view, changeView] = useState("default");
+  // const [view, changeView] = useState("default");
 
-  useEffect(() => {
-    async function handleOpenModal() {
-      if (uri) {
-        await web3Modal.openModal({
-          uri,
-          standaloneChains: ["eip155:1"],
-        });
-      }
-    }
-    handleOpenModal();
-  }, [uri]);
+  // useEffect(() => {
+  //   async function handleOpenModal() {
+  //     if (uri) {
+  //       await web3Modal.openModal({
+  //         uri,
+  //         standaloneChains: ["eip155:1"],
+  //       });
+  //     }
+  //   }
+  //   handleOpenModal();
+  // }, [uri]);
 
-  useEffect(() => {
-    if (address) {
-      web3Modal.closeModal();
-      changeView("signedIn");
-    }
-  }, [address, changeView]);
+  // useEffect(() => {
+  //   if (address) {
+  //     web3Modal.closeModal();
+  //     changeView("signedIn");
+  //   }
+  // }, [address, changeView]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <ToastContainer />
       <div width="100%" height="100%">
         {/* {view === "default" && ( */}
-          <button
+          <p>
+            <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold hover:text-black py-2 px-4 border border-white-500 hover:border-transparent rounded">
+              Connect a wallet
+            </button>
+          </p>
+          {/* <button
             onClick={onSignIn}
             disabled={!hasInitialized}
-          ></button>
+          ></button> */}
         {/* )} */}
         {/* {view === "signedIn" && <SignedInView address={address} />} */}
       </div>
