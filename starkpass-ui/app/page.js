@@ -1,14 +1,39 @@
 'use client'
 
 import Image from 'next/image'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import { connect } from "@argent/get-starknet"
+
+import {
+  SismoConnectButton,
+  SismoConnectResponse,
+  SismoConnectVerifiedResult,
+} from '@sismo-core/sismo-connect-react';
+import { useState } from 'react';
+import {
+  CONFIG,
+  AUTHS,
+  CLAIMS,
+  SIGNATURE_REQUEST,
+  AuthType,
+  ClaimType,
+} from './sismo-connect-config';
 
 export default function EventsList() {
   const [starknet, setStarknet] = useState(undefined);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [address, setAddress] = useState("");
+
+  const [sismoConnectVerifiedResult, setSismoConnectVerifiedResult] = useState(undefined);
+  const [sismoConnectResponse, setSismoConnectResponse] = useState(undefined);
+  const [pageState, setPageState] = useState('init');
+  const [error, setError] = useState('');
+  
+  const web3Modal = new Web3Modal({
+    projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+    walletConnectVersion: 2,
+  });
 
   const onSignIn = useCallback(async () => {
     if (!starknet) {
@@ -65,6 +90,65 @@ export default function EventsList() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <ToastContainer />
+      {pageState == "init" ? (
+          <>
+            <SismoConnectButton
+              config={CONFIG}
+              // Auths = Data Source Ownership Requests. (e.g Wallets, Github, Twitter, Github)
+              auths={AUTHS}
+              // Claims = prove group membership of a Data Source in a specific Data Group.
+              // (e.g ENS DAO Voter, Minter of specific NFT, etc.)
+              // Data Groups = [{[dataSource1]: value1}, {[dataSource1]: value1}, .. {[dataSource]: value}]
+              // Existing Data Groups and how to create one: https://factory.sismo.io/groups-explorer
+              claims={CLAIMS}
+              // Signature = user can sign a message embedded in their zk proof
+              signature={SIGNATURE_REQUEST}
+              text="Prove With Sismo"
+              // Triggered when received Sismo Connect response from user data vault
+              onResponse={async (response) => {
+                setSismoConnectResponse(response);
+                setPageState("verifying");
+                const verifiedResult = await fetch("/api/verify", {
+                  method: "POST",
+                  body: JSON.stringify(response),
+                });
+                const data = await verifiedResult.json();
+                if (verifiedResult.ok) {
+                  setSismoConnectVerifiedResult(data);
+                  setPageState("verified");
+                } else {
+                  setPageState("error");
+                  setError(data);
+                }
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                window.location.href = "/";
+              }}
+            >
+              {" "}
+              RESET{" "}
+            </button>
+            <br></br>
+            <div className="status-wrapper">
+              {pageState == "verifying" ? (
+                <span className="verifying"> Verifying ZK Proofs... </span>
+              ) : (
+                <>
+                  {Boolean(error) ? (
+                    <span className="error"> Error verifying ZK Proofs: {error} </span>
+                  ) : (
+                    <span className="verified"> ZK Proofs verified!</span>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        )}
       <div width="100%" height="100%">
         {/* {view === "default" && ( */}
           <p>
