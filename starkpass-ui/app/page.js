@@ -77,7 +77,7 @@ export default function EventsList() {
           </h2>
           <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
             July 21-23, 2023
-            Join the ETHGlobal Hackathon in Paris! Bring your laptop and let's code!
+            Join the ETHGlobal Hackathon in Paris! Bring your laptop and let&apos;s code!
           </p>
         </a>
 
