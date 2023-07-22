@@ -8,12 +8,8 @@ trait MyIERC20Trait<T> {
         self: @T, account: ContractAddress, _contract_address: ContractAddress
     ) -> u256;
     fn approve(self: T, spender: ContractAddress, amount: u256, _contract_address: ContractAddress);
-// fn transfer(self: T, recipient: ContractAddress, amount: u256);
-}
-
-trait IEventTrait<T> {
-    fn donate(ref self: T, amount: u128);
-    fn get_balance(self: @T) -> u128;
+    fn withdraw_balance(ref self: T);
+    // fn transfer(self: T, recipient: ContractAddress, amount: u256);
 }
 
 #[starknet::contract]
@@ -25,17 +21,12 @@ mod StarkPassEvent {
     use erc20::IERC20Dispatcher;
     use erc20::IERC20DispatcherTrait;
 
+    // TODO: Define constant for the Etherium erc20
 
     #[storage]
     struct Storage {
-        balance: u128, 
-    // erc20_eth: IERC20Dispatcher
-    }
-
-    #[constructor]
-    fn constructor(
-        ref self: ContractState, _contract_address: ContractAddress
-    ) { // self.erc20_eth = IERC20Dispatcher { contract_address: _contract_address };
+        organizer: ContractAddress,
+        attendees: LegacyMap<ContractAddress, EventAttendant>
     }
 
     #[derive(Drop)]
@@ -44,9 +35,13 @@ mod StarkPassEvent {
         ticket: u128
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState, organizer: ContractAddress) {
+        self.organizer.write(organizer);
+    }
 
     #[external(v0)]
-    impl ERC20Impl of MyIERC20Trait<ContractState> {
+    impl EventImpl of IEventTrait<ContractState> {
         // Get token name of ETH_ERC20
         fn get_name(self: @ContractState, _contract_address: ContractAddress) -> felt252 {
             IERC20Dispatcher { contract_address: _contract_address }.name()
@@ -65,20 +60,12 @@ mod StarkPassEvent {
             _contract_address: ContractAddress
         ) {
             IERC20Dispatcher { contract_address: _contract_address }.approve(spender, amount);
-        // TODO: Emit an event here --> @Ilya
-        }
-    }
-
-    #[external(v0)]
-    impl EventImpl of IEventTrait<ContractState> {
-        // Get balance
-        fn get_balance(self: @ContractState) -> u128 {
-            return self.balance.read();
+            // TODO: Emit an event here --> @Ilya
         }
 
-        // Donate
-        fn donate(ref self: ContractState, amount: u128) {
-            self.balance.write(self.balance.read() + amount);
+        fn withdraw_balance(ref self: T) {
+            let recepient = self.organizer.read();
+            // TODO: Send eth to the recepient from the current address
         }
     }
 }
