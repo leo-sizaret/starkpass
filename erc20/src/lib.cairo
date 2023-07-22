@@ -6,7 +6,7 @@ trait IERC20<TContractState> {
     fn get_symbol(self: @TContractState) -> felt252;
     fn get_decimals(self: @TContractState) -> u8;
     fn get_total_supply(self: @TContractState) -> u256;
-    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+    fn balanceOf(self: @TContractState, account: ContractAddress) -> u256;
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn transfer_from(
@@ -98,7 +98,7 @@ mod erc_20 {
             self.total_supply.read()
         }
 
-        fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
+        fn balanceOf(self: @ContractState, account: ContractAddress) -> u256 {
             self.balances.read(account)
         }
 
