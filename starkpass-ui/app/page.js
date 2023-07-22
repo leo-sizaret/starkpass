@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
-import { Web3Modal } from "@web3modal/standalone";
 import { 
   SismoConnectButton, 
   AuthType,
@@ -39,11 +38,6 @@ export default function EventsList() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState();
-  
-  const web3Modal = new Web3Modal({
-    projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
-    walletConnectVersion: 2,
-  });
 
   async function onSismoConnectResponse(response) {
     setLoading(true);
@@ -84,7 +78,7 @@ export default function EventsList() {
     setAddress(starknet.account.address);
     changeView("signedIn");
     setHasInitialized(starknet.isConnected);
-  }, [starknet]);
+  },[]);
 
   const onBuyTicket = useCallback(async () => {
     console.log(address);
