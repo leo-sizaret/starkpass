@@ -119,15 +119,25 @@ function drawEmojiOnCanvas() {
 }
 
 export default function EventsList() {
+  // wallet
   const [hasInitialized, setHasInitialized] = useState(true);
   const [view, changeView] = useState("default");
   const [address, setAddress] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState();
+  // sismo
+  const [loading, setSismoLoading] = useState(false);
+  const [error, setSismoError] = useState();
+
+  // button events
+  var buttonsStatesVar = {}
+  for (let i = 0; i < starknetEvents.length; i++) {
+    buttonsStatesVar[starknetEvents[i].contractId] = false
+  }
+  const [buttonStates, setButtonState] = useState(buttonsStatesVar);
+
 
   async function onSismoConnectResponse(response) {
-    setLoading(true);
+    setSismoLoading(true);
     try {
       const res = await fetch("/api/sismo", {
         method: "POST",
@@ -135,18 +145,19 @@ export default function EventsList() {
       });
       if (!res.ok) {
         const error = await res.json();
-        setError(error);
+        setSismoError(error);
         return;
       }
       const contractsWithProofs = await res.json();
-      //TODO: use json {
-      //  'contractIds': contractIds,
-      //  'proofs': proofs
-      //}
+
+      for (let i = 0; i < contractsWithProofs['contractIds'].length; i++) {
+        buttonStates[contractsWithProofs['contractIds'][i]] = true;
+      }
+
     } catch (err) {
-      setError(err.message);
+      setSismoError(err.message);
     } finally {
-      setLoading(false);
+      setSismoLoading(false);
     }
   }  
 
@@ -167,9 +178,17 @@ export default function EventsList() {
     // toast('🦄 Auth request successful!');
   }, []);
 
-  const onBuyTicket = useCallback(async address => {
+  const onBuyTicket = useCallback(async (e, address) => {
     console.log(address);
-    await buyTicket(address);
+    //await buyTicket(address);
+    
+    // it is awful but works, sorry
+    e.target.innerHTML = 'You are in!!!'
+    e.target.onClick = ''
+
+    const state = buttonStates
+    state[e.target.id] = true
+    setButtonState(state)
   }, [address]);
 
   useEffect(() => {
@@ -267,10 +286,12 @@ export default function EventsList() {
             {event.description}
           </p>
           <p className="py-4">
-          <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
-                  onClick={onBuyTicket}>
-            Buy a ticket ({event.price})
-          </button>
+             <button 
+              id={event.contractId}
+              className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
+              onClick={e => onBuyTicket(e)}>
+               {buttonStates[event.contractId]? <p>You are in!!!</p>: <p>Buy a ticket {event.price}</p>}
+            </button>
           </p>
         </div>
       ))}
