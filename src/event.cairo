@@ -8,6 +8,7 @@ trait IEventTrait<T> {
     fn get_attendant(self: @T, attendant: ContractAddress) -> bool;
     fn get_ticket_price(self: @T) -> u256;
     fn transfer_balance_to_organizer(ref self: T);
+    fn mock_buy_ticket(ref self: T);
     fn buy_ticket(ref self: T);
 }
 
@@ -25,6 +26,7 @@ mod StarkPassEvent {
 
     #[storage]
     struct Storage {
+        event_id: felt252,
         organizer: ContractAddress,
         ticket_price: u256,
         attendees: LegacyMap<ContractAddress, bool>
@@ -48,11 +50,15 @@ mod StarkPassEvent {
 
     // Remember to pass 2 params for u256
     #[constructor]
-    fn constructor(ref self: ContractState, _organizer: ContractAddress, _ticket_price: u256) {
-        // TODO: add an admin function to change the organizer
-        // TODO add an admin function to change the ticket price
+    fn constructor(
+        ref self: ContractState,
+        _organizer: ContractAddress,
+        _ticket_price: u256,
+        _event_id: felt252
+    ) {
         self.organizer.write(_organizer);
         self.ticket_price.write(_ticket_price);
+        self.event_id.write(_event_id);
     }
 
     #[external(v0)]
@@ -86,6 +92,11 @@ mod StarkPassEvent {
             self.transfer(organizer, amount);
         }
 
+        fn mock_buy_ticket(ref self: ContractState) {
+            let sender = get_caller_address();
+            self.attendees.write(sender, true);
+        }
+
         fn buy_ticket(ref self: ContractState) {
             let ticket_price = self.ticket_price.read();
             let sender = get_caller_address();
@@ -98,6 +109,7 @@ mod StarkPassEvent {
             self.attendees.write(sender, true);
         }
     }
+
 
     #[generate_trait]
     impl PrivateTraitImpl of PrivateTrait {
