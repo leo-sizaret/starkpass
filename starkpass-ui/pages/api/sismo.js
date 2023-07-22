@@ -10,18 +10,21 @@ export default async function handler(req, res) {
   const proofs = sismoConnectResponse['proofs'];
   console.log(proofs);
 
-  const contractIds = [];
+  const contractIds = new Set();
 
   for (var i = 0; i < proofs.length; i++) {
       const proofData = proofs[i]['proofData'];
-      const proofDataContracts = kv.get(proofData);
-      if (proofDataContracts && proofDataContracts['contractId']) {
-        contractIds.push(proofDataContracts['contractId']);
+      const proofDataContracts = await kv.get(proofData);
+      console.log("contract data kv", proofDataContracts)
+      if (proofDataContracts) {
+        for (var j = 0; j < proofDataContracts.length; j++) {
+          contractIds.add(proofDataContracts[j]['contractId']);
+        }
       }
   }
 
   res.status(200).json({
-    'contractIds': contractIds,
+    'contractIds': Array.from(contractIds),
     'proofs': proofs
   });
   res.send();
