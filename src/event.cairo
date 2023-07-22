@@ -1,29 +1,19 @@
 use core::traits::Into;
 use starknet::ContractAddress;
-// use array::ArrayTrait;
 
 #[starknet::interface]
 trait IEventTrait<T> {
     fn get_name(self: @T) -> felt252;
-    fn get_balance_of_contract(self: @T //, _contract_address: ContractAddress
-    ) -> u256;
+    fn get_balance_of_contract(self: @T) -> u256;
     fn get_attendant(self: @T, attendant: ContractAddress) -> bool;
     fn get_ticket_price(self: @T) -> u256;
-    fn get_allowance_per_address(self: @T, adrs: ContractAddress) -> u256;
-    fn approve(ref self: T, spender: ContractAddress, amount: u256);
+    fn approve(ref self: T, sender: ContractAddress, amount: u256);
     fn transfer_balance_to_organizer(ref self: T);
-    fn transfer(ref self: T, recipient: ContractAddress, amount: u256);
-    fn transfer_from(
-        ref self: T, sender: ContractAddress, recipient: ContractAddress, amount: u256
-    ); // DEBUGGING
-    fn transfer_from_user_to_contract(ref self: T, amount: u256);
     fn buy_ticket(ref self: T);
 }
 
 #[starknet::contract]
 mod StarkPassEvent {
-    // use super::MyIERC20Trait;
-    // use super::MyIERC20TraitDispatcher;
     use super::IEventTrait;
     use super::ContractAddress;
     use erc20::IERC20Dispatcher;
@@ -41,14 +31,37 @@ mod StarkPassEvent {
         attendees: LegacyMap<ContractAddress, bool>
     }
 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        PaymentApprovalEvent: PaymentApprovalEvent,
+        TransferEvent: TransferEvent,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct PaymentApprovalEvent {
+        #[key]
+        sender: ContractAddress,
+        amount: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct TransferEvent {
+        #[key]
+        sender: ContractAddress,
+        recipient: ContractAddress,
+        amount: u256,
+    }
+
     const ETH_ERC20: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
 
+    // Remember to pass 2 params for u256
     #[constructor]
     fn constructor(ref self: ContractState, _organizer: ContractAddress, _ticket_price: u256) {
-        self.organizer.write(_organizer); // TODO: add an admin function to change the organizer
-        self
-            .ticket_price
-            .write(_ticket_price); // TODO add an admin function to change the ticket price
+        // TODO: add an admin function to change the organizer
+        // TODO add an admin function to change the ticket price
+        self.organizer.write(_organizer);
+        self.ticket_price.write(_ticket_price);
     }
 
     #[external(v0)]
@@ -57,45 +70,62 @@ mod StarkPassEvent {
 
         // Get token name of ETH_ERC20
         fn get_name(self: @ContractState) -> felt252 {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            IERC20Dispatcher { contract_address: contract_address }.name()
+            self.create_erc20_dispatcher().name()
         }
-        // Get balance of ETH_ERC20 for an account
+
+        // Get balance of ETH_ERC20 for the contract
         fn get_balance_of_contract(self: @ContractState) -> u256 {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            IERC20Dispatcher {
-                contract_address: contract_address
-            }.balanceOf(get_contract_address())
+            self.create_erc20_dispatcher().balanceOf(get_contract_address())
         }
 
         fn get_attendant(self: @ContractState, attendant: ContractAddress) -> bool {
             self.attendees.read(attendant)
         }
 
-        // add get ticket price
         fn get_ticket_price(self: @ContractState) -> u256 {
             self.ticket_price.read()
         }
 
-        fn get_allowance_per_address(self: @ContractState, adrs: ContractAddress) -> u256 {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            let owner = get_caller_address();
-            let spender = get_contract_address();
-            IERC20Dispatcher { contract_address: contract_address }.allowance(owner, spender)
-        }
-
         // ##### ERC20 ACTIVE FUNCTIONS #####
 
-        fn approve(ref self: ContractState, spender: ContractAddress, amount: u256, ) {
+        fn transfer_balance_to_organizer(ref self: ContractState) {
+            let organizer = self.organizer.read();
+            assert(get_caller_address() == organizer, 'CALLER_IS_NOT_ORGANIZER');
+            let amount = self.get_balance_of_contract();
+            self.transfer(organizer, amount);
+        }
+
+        fn approve(ref self: ContractState, sender: ContractAddress, amount: u256, ) {
+            self.create_erc20_dispatcher().approve(sender, amount);
+            self.emit(Event::PaymentApprovalEvent(
+                PaymentApprovalEvent { sender: sender, amount: amount }
+            ));
+        }
+
+        fn buy_ticket(ref self: ContractState) {
+            let ticket_price = self.ticket_price.read();
+            let sender = get_caller_address();
+            // Approval has to be done from the front-end
+            // self.approve(sender, ticket_price);
+
+            self.create_erc20_dispatcher().transferFrom(
+                get_caller_address(),
+                get_contract_address(),
+                ticket_price
+            );
+            self.attendees.write(sender, true);
+        }
+    }
+
+    #[generate_trait]
+    impl PrivateTraitImpl of PrivateTrait {
+        fn create_erc20_dispatcher(self: @ContractState) -> IERC20Dispatcher {
             let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            IERC20Dispatcher { contract_address: contract_address }.approve(spender, amount);
-        // TODO: Emit an event here --> @Ilya
+            IERC20Dispatcher { contract_address: contract_address }
         }
 
         fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            IERC20Dispatcher { contract_address: contract_address }.transfer(recipient, amount);
-        // TODO: Emit an event here --> @Ilya
+            self.transfer_from(get_caller_address(), recipient, amount);
         }
 
         fn transfer_from(
@@ -104,43 +134,10 @@ mod StarkPassEvent {
             recipient: ContractAddress,
             amount: u256
         ) {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            IERC20Dispatcher {
-                contract_address: contract_address
-            }.transferFrom(sender, recipient, amount);
-        }
-
-        // show allowances
-
-        fn transfer_from_user_to_contract(ref self: ContractState, amount: u256) {
-            let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
-            let sender = get_caller_address();
-            let recipient = get_contract_address();
-            IERC20Dispatcher {
-                contract_address: contract_address
-            }.transferFrom(sender, recipient, amount);
-        }
-
-        fn transfer_balance_to_organizer(ref self: ContractState) {
-            let organizer = self.organizer.read();
-            assert(get_caller_address() == organizer, 'CALLER_IS_NOT_ORGANIZER');
-            let amount = self.get_balance_of_contract();
-            self.transfer(organizer, amount);
-        // TODO: Emit an event here --> @Ilya
-        }
-
-        // ##### TICKET FUNCTIONS #####
-
-        fn buy_ticket(ref self: ContractState) {
-            let ticket_price = self.ticket_price.read();
-            let spender = get_caller_address();
-            // Approve eth erc20
-            // Remember to pass 2 params. If there's a bug, change back to u128 transfer from user to contract
-            self.approve(spender, ticket_price);
-            // Transfer from user to contract
-            self.transfer_from_user_to_contract(ticket_price);
-        // create ticket
-        // self.attendees.write(spender, true);
+            self.create_erc20_dispatcher().transferFrom(sender, recipient, amount);
+            self.emit(Event::TransferEvent(
+                TransferEvent { sender: sender, recipient: recipient, amount: amount }
+            ));
         }
     }
 }

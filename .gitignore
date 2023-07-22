@@ -16,6 +16,7 @@ src/temp.cairo
 /build
 /erc20/target/
 /src/target/
+/target/
 build.sh
 
 # misc
