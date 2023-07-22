@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useCallback, useEffect } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import { connect } from "@argent/get-starknet"
+import { Web3Modal } from "@web3modal/standalone";
 
 import {
   SismoConnectButton,
