@@ -233,23 +233,28 @@ export default function EventsList() {
           <div>
             <ToastContainer />
           </div>
-          <SismoConnectButton
-            // the client config created
-            config={sismoConnectConfig}
-            // the auth request we want to make
-            // here we want the proof of a Sismo Vault ownership from our users
-            auths={[
-              { authType: AuthType.VAULT },
-              { authType: AuthType.TELEGRAM },
-            ]}
-            // we ask the user to sign a message
-            signature={{ message: "Sign to get a ticket", isSelectableByUser: true }}
-            // onResponseBytes calls a 'setResponse' function with the responseBytes returned by the Sismo Vault
-            onResponse={(response) => {
-              onSismoConnectResponse(response);
-            }}
-            verifying={sismoLoading}
-          />
+          {!sismoToken ? (
+              <>
+              <SismoConnectButton
+                // the client config created
+                config={sismoConnectConfig}
+                // the auth request we want to make
+                // here we want the proof of a Sismo Vault ownership from our users
+                auths={[
+                  { authType: AuthType.VAULT },
+                  { authType: AuthType.TELEGRAM },
+                ]}
+                // we ask the user to sign a message
+                signature={{ message: "Sign to get a ticket", isSelectableByUser: true }}
+                // onResponseBytes calls a 'setResponse' function with the responseBytes returned by the Sismo Vault
+                onResponse={(response) => {
+                  onSismoConnectResponse(response);
+                }}
+                verifying={sismoLoading}
+              /></>
+          ): (
+              <p className="py-6">Time to buy tickets!  </p>
+          )}
           {view === "default" && (
             <p className="py-4">
               <button className="hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border hover:border-transparent border-white-500 rounded"
