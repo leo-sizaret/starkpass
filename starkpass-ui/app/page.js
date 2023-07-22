@@ -19,6 +19,8 @@ import {
 } from './services/wallet-service'
 import { buyTicket } from './services/contract-service';
 
+var session = require('express-session')
+
 const sismoConnectConfig = {
   appId: "0x2e4b0b020662622f0fd32d496be3beca",
   vault: {
@@ -133,8 +135,8 @@ export default function EventsList() {
         setError(error);
         return;
       }
-      const user = await res.json();
-      setUser(user);
+      const proofsJson = await res.json();
+      //TODO: store in session
     } catch (err) {
       setError(err.message);
     } finally {
