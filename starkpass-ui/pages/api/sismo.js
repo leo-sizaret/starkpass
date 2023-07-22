@@ -13,12 +13,15 @@ export default async function handler(req, res) {
   const contractIds = new Set();
 
   for (var i = 0; i < proofs.length; i++) {
-      const proofData = proofs[i]['proofData'];
-      const proofDataContracts = await kv.get(proofData);
-      console.log("contract data kv", proofDataContracts)
-      if (proofDataContracts) {
-        for (var j = 0; j < proofDataContracts.length; j++) {
-          contractIds.add(proofDataContracts[j]['contractId']);
+      const auths = proofs[i]['auths'];
+      for (var j = 0; j < auths.length; j++) {
+        const userId = auths[j]['userId'];
+        const userIdContracts = await kv.get(userId);
+        console.log("contract data kv", userIdContracts)
+        if (userIdContracts) {
+          for (var k = 0; k < userIdContracts.length; k++) {
+            contractIds.add(userIdContracts[k]['contractId']);
+          }
         }
       }
   }
