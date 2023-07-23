@@ -47,7 +47,7 @@ const starknetEvents = [
         'https://www.meetup.com/starknet-amsterdam/events/294390075/',
         '0.1 ETH',
         'starknet-event-3',
-        true,
+        false,
     ),
 ]
 

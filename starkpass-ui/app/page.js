@@ -122,14 +122,6 @@ export default function EventsList() {
 
   const [events, setEvents] = useState([]);
 
-  // button events
-  var buttonsStatesVar = {}
-  for (let i = 0; i < starknetEvents.length; i++) {
-    buttonsStatesVar[starknetEvents[i].contractId] = false
-  }
-  const [buttonStates, setButtonState] = useState(buttonsStatesVar);
-
-
   async function onSismoConnectResponse(response) {
     setSismoLoading(true);
     try {
@@ -143,11 +135,15 @@ export default function EventsList() {
         return;
       }
       const contractsWithProofs = await res.json();
-
+    
       for (let i = 0; i < contractsWithProofs['contractIds'].length; i++) {
-        buttonStates[contractsWithProofs['contractIds'][i]] = true;
+        for (let j = 0; j < starknetEvents.length; j++) {
+          if (starknetEvents[j].contractId == contractsWithProofs['contractIds'][i]) {
+            starknetEvents[j].attending = true;
+          }
+        }
       }
-      
+      setEvents(starknetEvents);
       setSismoToken(contractsWithProofs['proofs'])
     } catch (err) {
       setSismoError(err.message);
@@ -181,11 +177,18 @@ export default function EventsList() {
 
   const onBuyTicket = useCallback(async event => {
     const contractAddress = event.contractId;
-    const tx = await buyTicket(address, contractAddress);
-    event.transactionId = "123123";
-    event.attending = true;
+    //const tx = await buyTicket(address, contractAddress);
+    const tx = '24324234234';
 
-    const contractId = event.contractId
+    for (let i = 0; i < starknetEvents.length; i++) {
+      if (starknetEvents[i].contractId == event.contractId) {
+        starknetEvents[i].transactionId = tx;
+        starknetEvents[i].attending = true;
+      }
+    }
+
+    setEvents(starknetEvents);
+
     console.log(sismoToken)
 
     const response = await fetch("api/events", {
@@ -194,16 +197,11 @@ export default function EventsList() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        'contractId': contractId,
+        'contractId': event.contractId,
         'proofs': sismoToken,
-        'transactionId': '0x0000000000'
+        'transactionId': tx,
       }),
     });
-
-    // Update button states anyways
-    const state = buttonStates
-    state[contractId] = true
-    setButtonState(state)
   }, [address]);
 
   useEffect(() => {
