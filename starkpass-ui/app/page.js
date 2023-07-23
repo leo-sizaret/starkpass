@@ -167,8 +167,8 @@ export default function EventsList() {
       changeView("signedIn");
       setHasInitialized(wallet.isConnected);
 
-      const events = await getEvents();
-      setEvents(events)
+      // const events = await getEvents(); TODO
+      setEvents(starknetEvents);
       console.log('======= EVENTS =======');
       console.log(events);
     }
@@ -178,10 +178,12 @@ export default function EventsList() {
     // toast('🦄 Auth request successful!');
   }, [events]);
 
-  const onBuyTicket = useCallback(async e => {
-    const tx = await buyTicket(address);
-    
-    const contractId = e.target.id
+  const onBuyTicket = useCallback(async event => {
+    const contractAddress = event.contractId;
+    const tx = await buyTicket(address, contractAddress);
+    event.transactionId = tx;
+    event.attending = true;
+
 
     const response = await fetch("api/events", {
       method: "POST", 
@@ -194,10 +196,6 @@ export default function EventsList() {
         'transactionId': '0x0000000000'
       }),
     });
-
-    // it is awful but works, sorry
-    e.target.innerHTML = 'You are in!!! ✅ '
-    e.target.onClick = ''
 
     // Update button states anyways
     const state = buttonStates
@@ -264,7 +262,7 @@ export default function EventsList() {
       </div>
 
       <div className="z-10 w-full max-w-7xl grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-      {starknetEvents.map((event) => (
+      {events.map((event) => (
           <div key={event.title} className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
             <a href={event.link} target="_blank" rel="noopener noreferrer">
               <h2 className={`mb-3 text-2xl font-semibold`}>
@@ -279,11 +277,16 @@ export default function EventsList() {
               {event.description}
             </p>
             <p className="py-4">
-              <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
-                      onClick={onBuyTicket}>
-                Buy a ticket ({event.price})
-              </button>
+              {!event.attending && (
+                <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
+                        onClick={() => onBuyTicket(event)}>
+                  Buy a ticket ({event.price})
+                </button>
+              ) || `You are in!!! ✅`}
             </p>
+            {event.transactionId && (
+              <p>{event.transactionId}</p>
+            )}
           </div>
       ))}
       </div>
