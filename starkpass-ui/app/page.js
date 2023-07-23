@@ -24,14 +24,7 @@ import {
 
 const sismoConnectConfig = {
   appId: process.env.NEXT_PUBLIC_SISMO_APP_ID,
-  vault: {
-    // For development purposes insert the identifier that you want to impersonate here
-    // Never use this in production
-    impersonate: [
-      "dhadrien.sismo.eth",
-      "telegram:dhadrien",
-    ],
-  },
+  vault: {},
 };
 
 // Draws 500 astronauts on the screen when wallet is connected :)
