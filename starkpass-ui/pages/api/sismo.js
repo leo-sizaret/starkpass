@@ -8,8 +8,7 @@ export default async function handler(req, res) {
   console.log("user verified", sismoConnectResponse);
 
   const proofs = sismoConnectResponse['proofs'];
-  console.log(proofs);
-  
+
   const contractIds = new Set();
 
   for (var i = 0; i < proofs.length; i++) {
@@ -17,7 +16,7 @@ export default async function handler(req, res) {
       for (var j = 0; j < auths.length; j++) {
         const userId = auths[j]['userId'];
         const userIdContracts = await kv.get(userId);
-        console.log("contract data kv", userIdContracts)
+        console.log("contract data kv", userId, userIdContracts)
         if (userIdContracts) {
           for (var k = 0; k < userIdContracts.length; k++) {
             contractIds.add(userIdContracts[k]['contractId']);
@@ -25,6 +24,8 @@ export default async function handler(req, res) {
         }
       }
   }
+
+  console.log('contractIds', contractIds)
 
   res.status(200).json({
     'contractIds': Array.from(contractIds),

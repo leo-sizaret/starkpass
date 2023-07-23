@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const proofs = reqBody['proofs'];
     const transactionId = reqBody['transactionId'];
 
-    console.log(proofs);
+    console.log('POST', reqBody);
 
     if (transactionId && proofs) {
       for (var i = 0; i < proofs.length; i++) {
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
             'contractId': contractId,
           }];
 
-          console.log(userIdContractsToPush);
+          console.log('kv push', userId, userIdContractsToPush);
 
           if (userIdContracts) {
             kv.set(userId, userIdContracts.concat(userIdContractsToPush));
