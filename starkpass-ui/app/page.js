@@ -137,13 +137,13 @@ export default function EventsList() {
       const contractsWithProofs = await res.json();
     
       for (let i = 0; i < contractsWithProofs['contractIds'].length; i++) {
-        for (let j = 0; j < starknetEvents.length; j++) {
-          if (starknetEvents[j].contractId == contractsWithProofs['contractIds'][i]) {
-            starknetEvents[j].attending = true;
+        for (let j = 0; j < events.length; j++) {
+          if (events[j].contractId == contractsWithProofs['contractIds'][i]) {
+            events[j].attending = true;
           }
         }
       }
-      setEvents(starknetEvents);
+      setEvents(events);
       setSismoToken(contractsWithProofs['proofs'])
     } catch (err) {
       setSismoError(err.message);
@@ -177,17 +177,16 @@ export default function EventsList() {
 
   const onBuyTicket = useCallback(async event => {
     const contractAddress = event.contractId;
-    //const tx = await buyTicket(address, contractAddress);
-    const tx = '24324234234';
+    const tx = await buyTicket(address, contractAddress);
 
-    for (let i = 0; i < starknetEvents.length; i++) {
-      if (starknetEvents[i].contractId == event.contractId) {
-        starknetEvents[i].transactionId = tx;
-        starknetEvents[i].attending = true;
+    for (let i = 0; i < events.length; i++) {
+      if (events[i].contractId == event.contractId) {
+        events[i].transactionId = tx;
+        events[i].attending = true;
       }
     }
 
-    setEvents(starknetEvents);
+    setEvents(events);
 
     console.log(sismoToken)
 
@@ -202,7 +201,7 @@ export default function EventsList() {
         'transactionId': tx,
       }),
     });
-  }, [address]);
+  }, [events, address]);
 
   useEffect(() => {
     setEvents(starknetEvents);
