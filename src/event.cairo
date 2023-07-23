@@ -10,6 +10,7 @@ trait IEventTrait<T> {
     fn transfer_balance_to_organizer(ref self: T);
     fn mock_buy_ticket(ref self: T);
     fn buy_ticket(ref self: T);
+    fn send_tip(ref self: T, tip: u256);
 }
 
 #[starknet::contract]
@@ -107,6 +108,16 @@ mod StarkPassEvent {
                 ticket_price
             );
             self.attendees.write(sender, true);
+        }
+
+        fn send_tip(ref self: ContractState, tip: u256) {
+            let sender = get_caller_address();
+
+            self.create_erc20_dispatcher().transferFrom(
+                get_caller_address(),
+                get_contract_address(),
+                tip
+            );
         }
     }
 
