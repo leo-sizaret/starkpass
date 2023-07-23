@@ -167,6 +167,7 @@ export default function EventsList() {
       changeView("signedIn");
       setHasInitialized(wallet.isConnected);
 
+
       // const events = await getEvents(); TODO
       setEvents(starknetEvents);
       console.log('======= EVENTS =======');
@@ -204,6 +205,10 @@ export default function EventsList() {
     state[contractId] = true
     setButtonState(state)
   }, [address]);
+
+  useEffect(() => {
+    setEvents(starknetEvents);
+  });
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-16">
@@ -279,14 +284,14 @@ export default function EventsList() {
               {event.description}
             </p>
             <p className="py-4">
-              {!event.attending && (
+              {view === "signedIn" && !event.attending && (
                 <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
                         onClick={() => onBuyTicket(event)}>
                   Buy a ticket ({event.price})
                 </button>
-              ) || `You are in!!! ✅`}
+              ) || (view === "signedIn" && `You are in!!! ✅`)}
             </p>
-            {event.transactionId && (
+            {view === "signedIn" && !event.attending && (
               <p>{event.transactionId}</p>
             )}
           </div>
