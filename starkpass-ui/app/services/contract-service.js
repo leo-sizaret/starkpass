@@ -9,7 +9,7 @@ export const buyTicket = async (
 ) => {
     const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
     const contractAddress = '0x02973ae12f33c976ddcc7703e64abe0f7eaaae499910950359d441f0d8cb5cec'
-    const privateKey0 = '';
+    const privateKey0 = process.env.NEXT_PUBLIC_ACC_KEY;
     const account0 = new Account(provider, accountAddress, privateKey0);
 
     if (!starknet.isConnected) {
