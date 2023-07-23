@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
     console.log(proofs);
 
-    if (transactionId) {
+    if (transactionId && proofs) {
       for (var i = 0; i < proofs.length; i++) {
         const auths = proofs[i]['auths'];
         for (var j = 0; j < auths.length; j++) {

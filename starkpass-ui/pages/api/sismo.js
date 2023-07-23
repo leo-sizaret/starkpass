@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   const proofs = sismoConnectResponse['proofs'];
   console.log(proofs);
-
+  
   const contractIds = new Set();
 
   for (var i = 0; i < proofs.length; i++) {
