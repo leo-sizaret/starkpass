@@ -177,6 +177,7 @@ export default function EventsList() {
 
   const onBuyTicket = useCallback(async event => {
     const contractAddress = event.contractId;
+    toast('🥖 Wait while your ticket is being fetched 🥖');
     const tx = await buyTicket(address, contractAddress);
 
     for (let i = 0; i < events.length; i++) {
@@ -186,7 +187,7 @@ export default function EventsList() {
       }
     }
 
-    setEvents(events);
+    setEvents([...events]);
 
     console.log(sismoToken)
 
@@ -288,7 +289,7 @@ export default function EventsList() {
                 </button>
               ) || (view === "signedIn" && `You are in!!! ✅`)}
             </p>
-            {view === "signedIn" && !event.attending && (
+            {view === "signedIn" && event.attending && (
               <p>{event.transactionId}</p>
             )}
           </div>

@@ -24,7 +24,7 @@ export const buyTicket = async (
     const tx = await provider.waitForTransaction(res.transaction_hash);
 
     console.log('buy transaction: ', tx)
-    return tx
+    return tx.transaction_hash;
 }
 
 export const getEvents = async () => {

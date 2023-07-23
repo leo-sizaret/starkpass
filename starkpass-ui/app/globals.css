@@ -41,3 +41,8 @@ body {
   z-index: 4;
   pointer-events: none;
 }
+
+.Toastify__toast-body {
+  margin-top: 20px;
+  margin-right: 20px;
+}
