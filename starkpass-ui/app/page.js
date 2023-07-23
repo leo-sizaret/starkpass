@@ -237,7 +237,7 @@ export default function EventsList() {
                 verifying={sismoLoading}
               /></>
           ): (
-              <p className="py-6">Time to buy tickets!  </p>
+              <p className="py-6 pr-3">Time to buy tickets! 🎫 </p>
           )}
           {view === "default" && (
             <p className="py-4">
