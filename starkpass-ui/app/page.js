@@ -181,9 +181,11 @@ export default function EventsList() {
   const onBuyTicket = useCallback(async event => {
     const contractAddress = event.contractId;
     const tx = await buyTicket(address, contractAddress);
-    event.transactionId = tx;
+    event.transactionId = "123123";
     event.attending = true;
 
+    const contractId = event.contractId
+    console.log(sismoToken)
 
     const response = await fetch("api/events", {
       method: "POST", 
