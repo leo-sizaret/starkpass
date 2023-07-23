@@ -1,43 +1,36 @@
 import { getStarknet } from '@argent/get-starknet'
-import { Provider, Contract, constants } from 'starknet'
+import { Provider, Contract, Account, constants } from 'starknet'
+
+import { abi } from '../abi/contractAbi.js';
 
 
 export const buyTicket = async (
   accountAddress,
 ) => {
     const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
-    const contractAddress = '0x03b7fb1d179c58d946e8a93de2edb659977bfddbaae79887cb330819e9317ecc'
+    const contractAddress = '0x02973ae12f33c976ddcc7703e64abe0f7eaaae499910950359d441f0d8cb5cec'
+    const privateKey0 = '';
+    const account0 = new Account(provider, accountAddress, privateKey0);
 
-    const { abi: contractAbi } = await provider.getClassAt(contractAddress);
-    console.log(contractAbi)
-    // const starknet = getStarknet()
     if (!starknet.isConnected) {
         throw Error("starknet wallet not connected")
     }
 
-    const ourContract = new Contract(contractAbi, contractAddress, provider);
+    const ourContract = new Contract(abi, contractAddress, provider);
+    ourContract.connect(account0);
+    
+    const call = ourContract.populate("mock_buy_ticket");
+    const res = await ourContract.mock_buy_ticket();
+    const tx = await provider.waitForTransaction(res.transaction_hash);
 
-    console.log(ourContract)
-
-    // TBD
-    // return ourContract.buyTicket(
-    //     contractAddress,
-    //     parseInputAmountToUint256(transferAmount),
-    // )
-    // const balance = ourContract.mock_buy_ticket(accountAddress)
-    const balance = await ourContract.get_balance_of_contract()
-    console.log('AAAAAAAAAA ======')
-    console.log(balance)
-    return balance
+    console.log('buy transaction: ', tx)
+    return tx
 }
 
 export const getEvents = async () => {
     const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
     // Get all created events stored in a factory contract
     const factoryContractAddress = 'TBA'
-
-    // const { abi: factoryContractAbi } = await provider.getClassAt(factoryContractAddress);
-    // const starknet = getStarknet()
     if (!starknet.isConnected) {
         throw Error("starknet wallet not connected")
     }
@@ -47,8 +40,7 @@ export const getEvents = async () => {
     const createdEvents = ['0x0788229687a4db6916f2ced01c3514c53281257ab4d45515dd700f2042cf370b', '0x05e59d617a88c10b2994fd27ccac700339f816f05715944935ec744085c69abc']
 
     const getEventInfo = async eventContractAddress => {
-        const { abi: eventAbi } = await provider.getClassAt(eventContractAddress);
-        const eventContract = new Contract(eventAbi, eventContractAddress, provider);
+        const eventContract = new Contract(abi, eventContractAddress, provider);
         const name = await eventContract.get_name()
         return {
             name,

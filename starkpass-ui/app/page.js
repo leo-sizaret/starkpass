@@ -129,6 +129,8 @@ export default function EventsList() {
   const [sismoError, setSismoError] = useState();
   const [sismoToken, setSismoToken] = useState();
 
+  const [events, setEvents] = useState([]);
+
   // button events
   var buttonsStatesVar = {}
   for (let i = 0; i < starknetEvents.length; i++) {
@@ -173,16 +175,20 @@ export default function EventsList() {
       setAddress(wallet.account.address);
       changeView("signedIn");
       setHasInitialized(wallet.isConnected);
+
+      const events = await getEvents();
+      setEvents(events)
+      console.log('======= EVENTS =======');
+      console.log(events);
     }
 
     getWallet()
 
     // toast('🦄 Auth request successful!');
-  }, []);
+  }, [events]);
 
-  const onBuyTicket = useCallback(async (e, address) => {
-    console.log(address);
-    //await buyTicket(address);
+  const onBuyTicket = useCallback(async e => {
+    const tx = await buyTicket(address);
     
     //sismoToken has sismo proof.
     // Need to send to POST https://starkpass-brown.vercel.app/api/events
@@ -197,32 +203,6 @@ export default function EventsList() {
     state[e.target.id] = true
     setButtonState(state)
   }, [address]);
-
-  useEffect(() => {
-    const handler = async () => {
-      const wallet = await getConnectedWallet();
-      if (!wallet || !wallet.isConnected) {
-        return;
-      }
-  
-      setAddress(wallet.account.address);
-      changeView("signedIn");
-      setHasInitialized(wallet.isConnected);
-
-      const events = await getEvents();
-      console.log('======= EVENTS =======');
-      console.log(events);
-    };
-
-    (async () => {
-      await handler()
-      addWalletChangeListener(handler)
-    })();
-
-    return () => {
-      removeWalletChangeListener(handler)
-    }
-  }, []);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-16">
@@ -284,28 +264,26 @@ export default function EventsList() {
 
       <div className="z-10 w-full max-w-7xl grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
       {starknetEvents.map((event) => (
-          <div key={event.id} className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
-          <a href={event.link} target="_blank" rel="noopener noreferrer">
-            <h2 className={`mb-3 text-2xl font-semibold`}>
-             {event.title}
-              <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                -&gt;
-              </span>
-            </h2>
-          </a>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            {event.date}
-            {event.description}
-          </p>
-          <p className="py-4">
-             <button 
-              id={event.contractId}
-              className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
-              onClick={e => onBuyTicket(e)}>
-               {buttonStates[event.contractId]? <p>You are in!!!</p>: <p>Buy a ticket {event.price}</p>}
-            </button>
-          </p>
-        </div>
+          <div key={event.title} className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
+            <a href={event.link} target="_blank" rel="noopener noreferrer">
+              <h2 className={`mb-3 text-2xl font-semibold`}>
+              {event.title}
+                <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                  -&gt;
+                </span>
+              </h2>
+            </a>
+            <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
+              {event.date}
+              {event.description}
+            </p>
+            <p className="py-4">
+              <button className="bg-transparent hover:bg-white-500 text-white-700 font-semibold py-2 px-4 border border-white-500 hover:border-transparent rounded"
+                      onClick={onBuyTicket}>
+                Buy a ticket ({event.price})
+              </button>
+            </p>
+          </div>
       ))}
       </div>
     </main>
