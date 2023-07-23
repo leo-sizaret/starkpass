@@ -1,7 +1,7 @@
 import { getStarknet } from '@argent/get-starknet'
 import { Provider, Contract, Account, constants } from 'starknet'
 
-import { abi } from '../abi/contractAbi.js';
+import { abi } from '../abi/contractAbi';
 
 
 export const buyTicket = async (
