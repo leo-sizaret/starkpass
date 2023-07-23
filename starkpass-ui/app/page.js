@@ -22,8 +22,6 @@ import {
   starknetEvents
 } from './event'
 
-const session = require('express-session')
-
 const sismoConnectConfig = {
   appId: process.env.NEXT_PUBLIC_SISMO_APP_ID,
   vault: {
@@ -190,17 +188,27 @@ export default function EventsList() {
   const onBuyTicket = useCallback(async e => {
     const tx = await buyTicket(address);
     
-    //sismoToken has sismo proof.
-    // Need to send to POST https://starkpass-brown.vercel.app/api/events
-    // '{"contractId": "0x00001", "proofs": [], "transactionId": "0x11111"}'
+    const contractId = e.target.id
+
+    const response = await fetch("api/events", {
+      method: "POST", 
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        'contractId': contractId,
+        'proofs': sismoToken,
+        'transactionId': '0x0000000000'
+      }),
+    });
 
     // it is awful but works, sorry
-    e.target.innerHTML = 'You are in!!!'
+    e.target.innerHTML = 'You are in!!! ✅ '
     e.target.onClick = ''
 
     // Update button states anyways
     const state = buttonStates
-    state[e.target.id] = true
+    state[contractId] = true
     setButtonState(state)
   }, [address]);
 
