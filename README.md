@@ -49,6 +49,24 @@ starkli declare ./target/dev/contracts_StarkPassEvent.sierra.json --network=goer
 starkli deploy <CLASS_HASH> <EVENT_ORGANIZER> <TICKET_PRICE_PART1_u128> <TICKET_PRICE_PART2_u128> <EVENT_NAME> --network=goerli-1
 ```
 
+## 🧑‍💻 Todos
+- [x]  Add events
+- [x]  Remove the *mock_buy* function
+- [ ]  Approve spending for ERC20 from the FE
+- [ ]  Add staking logic
+    - **Requirements:**
+        - Organizer can require users to stake a token to receive a ticket. “Staking” means “locking the token and receiving it back after a user attended the event”
+        - Organizer can redistribute the staked tokens to users who attended the event
+        - Organizer can specify that users receive their stake back after “checking in” (to be defined what checking in actually entails) or when the organizer decides to (i.e., organizer triggers a “stake reimbursement”)
+        - Users can stake tokens and receive a ticket
+        - Users can be checked in or checked out
+        - Users can receive their stake back immediately after checking in
+- [ ]  Add an event when sending a tip
+- [ ]  Add tests inside of the Cairo contracts
+- [ ]  Research whether Foundry for Cairo can be useful
+- [ ]  Add a factory contract
+- [ ]  Make tickets into ERC721 or Soulbound tokens that can be “checked in”
+
 ## LICENSE
 
 [MIT](https://opensource.org/license/mit/)
