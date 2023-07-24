@@ -7,7 +7,7 @@ trait IEventTrait<T> {
     fn get_balance_of_contract(self: @T) -> u256;
     fn get_attendant(self: @T, attendant: ContractAddress) -> bool;
     fn get_ticket_price(self: @T) -> u256;
-    fn change_organizer(ref self: T);
+    fn change_organizer(ref self: T, new_owner: ContractAddress);
     fn transfer_balance_to_organizer(ref self: T);
     fn buy_ticket(ref self: T);
     fn send_tip(ref self: T, tip: u256);
@@ -102,12 +102,11 @@ mod StarkPassEvent {
             self.ticket_price.read()
         }
 
-        fn change_organizer(ref self: ContractState) {
+        fn change_organizer(ref self: ContractState, new_owner: ContractAddress) {
             // Only the current organizer can assign a new organizer
             self.only_owner();
 
             // Change the owner
-            let new_owner = get_caller_address();
             self.organizer.write(new_owner);
 
             // Emit OwnershipTransfer event
