@@ -136,9 +136,7 @@ mod StarkPassEvent {
 
             // Pay in ERC20 if the ticket price is positive i.e., if the event isn't free
             if ticket_price > 0 {
-                self
-                    .create_erc20_dispatcher()
-                    .transferFrom(ticket_recipient, get_contract_address(), ticket_price);
+                self.transfer_from(ticket_recipient, get_contract_address(), ticket_price);
             }
 
             // Create a ticket
@@ -150,9 +148,7 @@ mod StarkPassEvent {
 
         fn send_tip(ref self: ContractState, tip: u256) {
             let sender = get_caller_address();
-            self
-                .create_erc20_dispatcher()
-                .transferFrom(get_caller_address(), get_contract_address(), tip);
+            self.transfer_from(get_caller_address(), get_contract_address(), tip);
         }
     }
 
