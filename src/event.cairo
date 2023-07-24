@@ -9,7 +9,6 @@ trait IEventTrait<T> {
     fn get_ticket_price(self: @T) -> u256;
     fn change_organizer(ref self: T);
     fn transfer_balance_to_organizer(ref self: T);
-    fn mock_buy_ticket(ref self: T);
     fn buy_ticket(ref self: T);
     fn send_tip(ref self: T, tip: u256);
 }
@@ -40,6 +39,7 @@ mod StarkPassEvent {
     enum Event {
         Transfer: Transfer,
         OwnershipTransfer: OwnershipTransfer,
+        CreateTicket: CreateTicket
     }
 
     #[derive(Drop, starknet::Event)]
@@ -56,6 +56,12 @@ mod StarkPassEvent {
         prev_owner: ContractAddress,
         #[key]
         new_owner: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct CreateTicket {
+        #[key]
+        ticket_recipient: ContractAddress,
     }
 
     const ETH_ERC20: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
@@ -97,6 +103,7 @@ mod StarkPassEvent {
         }
 
         fn change_organizer(ref self: ContractState) {
+            // Only the current organizer can assign a new organizer
             self.only_owner();
 
             // Change the owner
@@ -115,33 +122,35 @@ mod StarkPassEvent {
         }
 
         fn transfer_balance_to_organizer(ref self: ContractState) {
+            // Only the current owner can withdraw the contract balance
             self.only_owner();
             let organizer = self.organizer.read();
             let amount = self.get_balance_of_contract();
+
+            // Withdraw the contract's balance to the organizer's address
             self.transfer(organizer, amount);
         }
 
-        fn mock_buy_ticket(ref self: ContractState) {
-            let sender = get_caller_address();
-            self.attendees.write(sender, true);
-        }
-
         fn buy_ticket(ref self: ContractState) {
-            let sender = get_caller_address();
+            let ticket_recipient = get_caller_address();
             let ticket_price = self.ticket_price.read();
 
-            // Pay in ERC20 if the ticket price is positive i.e., the event isn't free
+            // Pay in ERC20 if the ticket price is positive i.e., if the event isn't free
             if ticket_price > 0 {
                 self
                     .create_erc20_dispatcher()
-                    .transferFrom(get_caller_address(), get_contract_address(), ticket_price);
-                self.attendees.write(sender, true);
+                    .transferFrom(ticket_recipient, get_contract_address(), ticket_price);
             }
+
+            // Create a ticket
+            self.attendees.write(ticket_recipient, true);
+
+            // Emit CreateTicket event to signal the purchase of a ticket
+            self.emit(Event::CreateTicket(CreateTicket { ticket_recipient: get_caller_address() }))
         }
 
         fn send_tip(ref self: ContractState, tip: u256) {
             let sender = get_caller_address();
-
             self
                 .create_erc20_dispatcher()
                 .transferFrom(get_caller_address(), get_contract_address(), tip);
