@@ -1,16 +1,16 @@
-use core::traits::Into;
 use starknet::ContractAddress;
+use StarkPassEvent::Attendee;
 
 #[starknet::interface]
-trait IEventTrait<T> {
-    fn get_name(self: @T) -> felt252;
-    fn get_balance_of_contract(self: @T) -> u256;
-    fn get_attendant(self: @T, attendant: ContractAddress) -> bool;
-    fn get_ticket_price(self: @T) -> u256;
-    fn change_organizer(ref self: T, new_owner: ContractAddress);
-    fn transfer_balance_to_organizer(ref self: T);
-    fn buy_ticket(ref self: T);
-    fn send_tip(ref self: T, tip: u256);
+trait IEventTrait<TContractState> {
+    fn get_name(self: @TContractState) -> felt252;
+    fn get_balance_of_contract(self: @TContractState) -> u256;
+    fn get_attendee(self: @TContractState, attendee_address: ContractAddress) -> Attendee;
+    fn get_ticket_price(self: @TContractState) -> u256;
+    fn change_organizer(ref self: TContractState, new_owner: ContractAddress);
+    fn transfer_balance_to_organizer(ref self: TContractState);
+    fn buy_ticket(ref self: TContractState);
+    fn send_tip(ref self: TContractState, tip: u256);
 }
 
 #[starknet::contract]
@@ -21,6 +21,7 @@ mod StarkPassEvent {
     use super::ContractAddress;
     use starknet::get_caller_address;
     use starknet::get_contract_address;
+    use core::traits::Into;
     use traits::TryInto;
     use option::OptionTrait;
 
@@ -30,7 +31,8 @@ mod StarkPassEvent {
         event_id: felt252,
         organizer: ContractAddress,
         ticket_price: u256,
-        attendees: LegacyMap<ContractAddress, bool>
+        staking_factor: u256,
+        attendees: LegacyMap<ContractAddress, Attendee>
     }
 
     // #### EVENTS ####
@@ -64,6 +66,15 @@ mod StarkPassEvent {
         ticket_recipient: ContractAddress,
     }
 
+    // #### STRUCTS ####    
+    #[derive(Drop, storage_access::StorageAccess, Serde)]
+    struct Attendee {
+        has_ticket: bool,
+        checked_in: bool,
+        stake: u256
+    }
+
+    // #### CONSTANTS ####
     const ETH_ERC20: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
 
     // Remember to pass 2 params for u256
@@ -72,14 +83,17 @@ mod StarkPassEvent {
         ref self: ContractState,
         _organizer: ContractAddress,
         _ticket_price: u256,
+        _staking_factor: u256,
         _event_id: felt252
     ) {
         assert(_ticket_price >= 0, 'Negative ticket price');
+        assert(_staking_factor >= 0 && _staking_factor <= 1, 'Staking must be >= 0 and <= 1');
         self.ticket_price.write(_ticket_price);
         self.organizer.write(_organizer);
         self.event_id.write(_event_id);
     }
 
+    // Public methods
     #[external(v0)]
     impl EventImpl of IEventTrait<ContractState> {
         // ##### GET FUNCTIONS #####
@@ -94,8 +108,8 @@ mod StarkPassEvent {
             self.create_erc20_dispatcher().balanceOf(get_contract_address())
         }
 
-        fn get_attendant(self: @ContractState, attendant: ContractAddress) -> bool {
-            self.attendees.read(attendant)
+        fn get_attendee(self: @ContractState, attendee_address: ContractAddress) -> Attendee {
+            self.attendees.read(attendee_address)
         }
 
         fn get_ticket_price(self: @ContractState) -> u256 {
@@ -131,19 +145,33 @@ mod StarkPassEvent {
         }
 
         fn buy_ticket(ref self: ContractState) {
-            let ticket_recipient = get_caller_address();
+            let attendee_address = get_caller_address();
             let ticket_price = self.ticket_price.read();
+            let staking_factor = self.staking_factor.read();
+
+            // Check that the attendee hasn't already purchased a ticket
+            // TODO: this will change if/when tickets become tokens and 1 attendee can own multiple tickets
+            assert(
+                self.attendees.read(attendee_address).has_ticket == false,
+                'Attendee already has ticket'
+            );
 
             // Pay in ERC20 if the ticket price is positive i.e., if the event isn't free
             if ticket_price > 0 {
-                self.transfer_from(ticket_recipient, get_contract_address(), ticket_price);
+                self.transfer_from(attendee_address, get_contract_address(), ticket_price);
             }
 
-            // Create a ticket
-            self.attendees.write(ticket_recipient, true);
+            // Add staking_factor
+            let staking_amount = self.staking_factor.read() * ticket_price;
 
-            // Emit CreateTicket event to signal the purchase of a ticket
-            self.emit(Event::CreateTicket(CreateTicket { ticket_recipient: get_caller_address() }))
+            // Create a  ticket
+            self
+                .create_ticket(
+                    attendee_address: attendee_address,
+                    has_ticket: true,
+                    checked_in: false,
+                    stake: staking_amount
+                );
         }
 
         fn send_tip(ref self: ContractState, tip: u256) {
@@ -152,9 +180,25 @@ mod StarkPassEvent {
         }
     }
 
+    // TODO: add ability for organizer to redistribute a share of ticket sales to users who staked
 
+    // Private methods
     #[generate_trait]
     impl PrivateTraitImpl of PrivateTrait {
+        fn create_ticket(
+            ref self: ContractState,
+            attendee_address: ContractAddress,
+            has_ticket: bool,
+            checked_in: bool,
+            stake: u256
+        ) {
+            // Create a ticket
+            self.attendees.write(attendee_address, Attendee { has_ticket, checked_in, stake });
+
+            // Emit CreateTicket event to signal the purchase of a ticket
+            self.emit(Event::CreateTicket(CreateTicket { ticket_recipient: attendee_address }))
+        }
+
         fn create_erc20_dispatcher(self: @ContractState) -> IERC20Dispatcher {
             let contract_address: ContractAddress = ETH_ERC20.try_into().unwrap();
             IERC20Dispatcher { contract_address: contract_address }
@@ -181,7 +225,7 @@ mod StarkPassEvent {
 
         fn only_owner(self: @ContractState) {
             let current_owner = self.organizer.read();
-            assert(get_caller_address() == current_owner, 'CALLER_IS_NOT_ORGANIZER');
+            assert(get_caller_address() == current_owner, 'Caller is not owner');
         }
     }
 }
