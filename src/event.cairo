@@ -3,13 +3,14 @@ use StarkPassEvent::Attendee;
 
 #[starknet::interface]
 trait IEventTrait<TContractState> {
-    fn get_name(self: @TContractState) -> felt252;
     fn get_balance_of_contract(self: @TContractState) -> u256;
     fn get_attendee(self: @TContractState, attendee_address: ContractAddress) -> Attendee;
     fn get_ticket_price(self: @TContractState) -> u256;
     fn change_organizer(ref self: TContractState, new_owner: ContractAddress);
     fn transfer_balance_to_organizer(ref self: TContractState);
     fn buy_ticket(ref self: TContractState);
+    fn redistribute_stake(ref self: TContractState);
+    // fn check_into_event(ref self: TContractState, attendee_address: ContractAddress);
     fn send_tip(ref self: TContractState, tip: u256);
 }
 
@@ -32,7 +33,11 @@ mod StarkPassEvent {
         organizer: ContractAddress,
         ticket_price: u256,
         staking_factor: u256,
-        attendees: LegacyMap<ContractAddress, Attendee>
+        total_stake: u256,
+        staked_amount_is_redistributed_after_check_in: bool,
+        address_to_attendee: LegacyMap<ContractAddress, Attendee>,
+        attendees_num_to_address: LegacyMap<u256, ContractAddress>,
+        num_attendees: u256
     }
 
     // #### EVENTS ####
@@ -66,6 +71,13 @@ mod StarkPassEvent {
         ticket_recipient: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct CheckIntoEvent {
+        #[key]
+        attendee: ContractAddress,
+        event: ContractAddress
+    }
+
     // #### STRUCTS ####    
     #[derive(Drop, storage_access::StorageAccess, Serde)]
     struct Attendee {
@@ -84,10 +96,14 @@ mod StarkPassEvent {
         _organizer: ContractAddress,
         _ticket_price: u256,
         _staking_factor: u256,
+        _staked_amount_is_redistributed_after_check_in: bool,
         _event_id: felt252
     ) {
         assert(_ticket_price >= 0, 'Negative ticket price');
         assert(_staking_factor >= 0 && _staking_factor <= 1, 'Staking must be >= 0 and <= 1');
+        self
+            .staked_amount_is_redistributed_after_check_in
+            .write(_staked_amount_is_redistributed_after_check_in);
         self.ticket_price.write(_ticket_price);
         self.organizer.write(_organizer);
         self.event_id.write(_event_id);
@@ -96,12 +112,7 @@ mod StarkPassEvent {
     // Public methods
     #[external(v0)]
     impl EventImpl of IEventTrait<ContractState> {
-        // ##### GET FUNCTIONS #####
-
         // Get token name of ETH_ERC20
-        fn get_name(self: @ContractState) -> felt252 {
-            self.create_erc20_dispatcher().name()
-        }
 
         // Get balance of ETH_ERC20 for the contract
         fn get_balance_of_contract(self: @ContractState) -> u256 {
@@ -109,7 +120,7 @@ mod StarkPassEvent {
         }
 
         fn get_attendee(self: @ContractState, attendee_address: ContractAddress) -> Attendee {
-            self.attendees.read(attendee_address)
+            self.address_to_attendee.read(attendee_address)
         }
 
         fn get_ticket_price(self: @ContractState) -> u256 {
@@ -150,9 +161,8 @@ mod StarkPassEvent {
             let staking_factor = self.staking_factor.read();
 
             // Check that the attendee hasn't already purchased a ticket
-            // TODO: this will change if/when tickets become tokens and 1 attendee can own multiple tickets
             assert(
-                self.attendees.read(attendee_address).has_ticket == false,
+                self.address_to_attendee.read(attendee_address).has_ticket == false,
                 'Attendee already has ticket'
             );
 
@@ -161,10 +171,11 @@ mod StarkPassEvent {
                 self.transfer_from(attendee_address, get_contract_address(), ticket_price);
             }
 
-            // Add staking_factor
+            // Increase the total amount staked
             let staking_amount = self.staking_factor.read() * ticket_price;
+            self.total_stake.write(self.total_stake.read() + staking_amount);
 
-            // Create a  ticket
+            // Create a  ticket and record the amount staked
             self
                 .create_ticket(
                     attendee_address: attendee_address,
@@ -172,15 +183,70 @@ mod StarkPassEvent {
                     checked_in: false,
                     stake: staking_amount
                 );
+
+            // Increase the coun of attendees
+            let current_attendee_num = self.num_attendees.read();
+            self.attendees_num_to_address.write(current_attendee_num, attendee_address);
+            self.num_attendees.write(current_attendee_num + 1);
         }
+
+        fn redistribute_stake(ref self: ContractState) {
+            let sender = get_contract_address();
+            assert(
+                self.address_to_attendee.read(sender).has_ticket == true, 'Attendee has no ticket'
+            );
+            assert(
+                self.address_to_attendee.read(sender).checked_in == true, 'Attendee not checked in'
+            );
+
+            let mut i: u256 = 0;
+
+            loop {
+                // Check breaking conditions for the loop
+                if (i > self.num_attendees.read() - 1) || (self.total_stake.read() <= 0) {
+                    break;
+                }
+
+                // Stop transfer if there's not enough stake
+                let attendee_address = self.attendees_num_to_address.read(i);
+                let attendee_stake = self.address_to_attendee.read(attendee_address).stake;
+                if (self.total_stake.read() - attendee_stake < 0) {
+                    break;
+                }
+
+                // Transfer stake back
+                self
+                    .address_to_attendee
+                    .write(sender, Attendee { has_ticket: true, checked_in: true, stake: 0 });
+                self.total_stake.write(self.total_stake.read() - attendee_stake);
+                self.transfer_from(sender, attendee_address, attendee_stake);
+                // Increment counter
+                i += 1;
+            }
+        }
+
+        // TODO: add a mechanism to control who can unstake (e.g., only owner can call this function, or users can call this function after timestamp T where T is set by the owner)
+        // fn check_into_event(ref self: ContractState, attendee_address: ContractAddress) {
+        //     let Attendee{has_ticket, checked_in, stake } = self
+        //         .address_to_attendee
+        //         .read(attendee_address);
+
+        //     // Check in the attendee
+        //     self
+        //         .address_to_attendee
+        //         .write(attendee_address, Attendee { has_ticket, checked_in: true, stake: 0 });
+
+        //     // Redistribute stake if staked_amount_is_redistributed_after_check_in == true
+        //     if self.staked_amount_is_redistributed_after_check_in.read() {
+        //         self.transfer_from(get_contract_address(), attendee_address, stake);
+        //     }
+        // }
 
         fn send_tip(ref self: ContractState, tip: u256) {
             let sender = get_caller_address();
             self.transfer_from(get_caller_address(), get_contract_address(), tip);
         }
     }
-
-    // TODO: add ability for organizer to redistribute a share of ticket sales to users who staked
 
     // Private methods
     #[generate_trait]
@@ -193,7 +259,9 @@ mod StarkPassEvent {
             stake: u256
         ) {
             // Create a ticket
-            self.attendees.write(attendee_address, Attendee { has_ticket, checked_in, stake });
+            self
+                .address_to_attendee
+                .write(attendee_address, Attendee { has_ticket, checked_in, stake });
 
             // Emit CreateTicket event to signal the purchase of a ticket
             self.emit(Event::CreateTicket(CreateTicket { ticket_recipient: attendee_address }))
