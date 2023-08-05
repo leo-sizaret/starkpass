@@ -3,117 +3,25 @@
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
-import { 
-  SismoConnectButton, 
-  AuthType,
-  ClaimType,
-} from '@sismo-core/sismo-connect-react';
+import { SismoConnectButton, AuthType } from '@sismo-core/sismo-connect-react';
 
 import { truncateAddress } from './services/address-service'
-import {
-  addWalletChangeListener,
-  connectWallet,
-  removeWalletChangeListener,
-  getConnectedWallet,
-} from './services/wallet-service'
-import { getEvents, buyTicket } from './services/contract-service';
+import { connectWallet } from './services/wallet-service'
+import { buyTicket } from './services/contract-service';
 
-import {
-  starknetEvents
-} from './event'
+import { starknetEvents } from './event'
+import { drawEmojiOnCanvas } from './utils';
 
 const sismoConnectConfig = {
   appId: process.env.NEXT_PUBLIC_SISMO_APP_ID,
   vault: {},
 };
 
-// Draws 500 astronauts on the screen when wallet is connected :)
-function drawEmojiOnCanvas() {
-  const emoji = ['👨‍🚀', '🚀'];
-  const totalEmojiCount = 500;
-
-  let continueDraw = false;
-  let context = null;
-  let canvasWidth = 0;
-  let canvasHeight = 0;
-  let emojies = [];
-
-  function initializeCanvas() {
-    const canvas = document.getElementsByClassName('emoji-canvas')[0];
-    context = canvas.getContext( '2d' );
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    context.scale(2, 2);
-    
-    generateCanvasSize(canvas);
-    generateEmojis();
-  }
-
-  function generateCanvasSize(canvas) {
-    const coord = canvas.getBoundingClientRect();
-    canvasWidth = coord.width;
-    canvasHeight = coord.height;
-  }
-
-  function generateEmojis() {
-    if (continueDraw === true) return;
-    emojies = [];
-    
-    for (let iterate = 0; iterate < totalEmojiCount; iterate++) {
-      const x = Math.floor(Math.random() * canvasWidth);
-      const offsetY = Math.abs(Math.floor(Math.random() * 300));
-      const fontSize = Math.floor(Math.random() * 40) + 20;
-
-      emojies.push({
-        emoji: emoji[Math.floor(Math.random() * emoji.length)],
-        x,
-        y: canvasHeight + offsetY,
-        count: Math.floor(Math.random() * 3) + 4,
-        fontSize,
-      });
-
-      if (iterate === (totalEmojiCount - 1)) {
-        continueDraw = true;
-        drawConfetti();
-        endDraw();
-      }
-    }
-  }
-
-  function drawConfetti() {
-    context.clearRect(0, 0, canvasWidth, canvasHeight);
-
-    emojies.forEach((emoji) => {
-      drawEmoji(emoji);
-      emoji.y = emoji.y - emoji.count;
-    });
-
-    if (continueDraw) {
-      requestAnimationFrame(drawConfetti.bind(this));
-    }
-  }
-
-  function drawEmoji(emoji) {
-    context.beginPath();
-    context.font = emoji.fontSize + 'px serif';
-    context.fillText(emoji.emoji, emoji.x, emoji.y);
-  }
-
-  function endDraw() {
-    setTimeout(() => {
-      continueDraw = false;
-      context.clearRect(0, 0, canvasWidth, canvasHeight);
-    }, 5000);
-  }
-
-  initializeCanvas();
-}
-
 export default function EventsList() {
   // wallet
   const [hasInitialized, setHasInitialized] = useState(true);
   const [view, changeView] = useState("default");
-  const [address, setAddress] = useState("");
+  const [walletAccount, setWalletAccount] = useState({});
 
   // sismo
   const [sismoLoading, setSismoLoading] = useState(false);
@@ -159,7 +67,7 @@ export default function EventsList() {
         toast("Rejected wallet selection or silent connect found nothing");
       }
       drawEmojiOnCanvas()
-      setAddress(wallet.account.address);
+      setWalletAccount(wallet.account);
       changeView("signedIn");
       setHasInitialized(wallet.isConnected);
 
@@ -178,7 +86,7 @@ export default function EventsList() {
   const onBuyTicket = useCallback(async event => {
     const contractAddress = event.contractId;
     toast('🥖 Wait while your ticket is being fetched 🥖');
-    const tx = await buyTicket(address, contractAddress);
+    const tx = await buyTicket(contractAddress);
 
     for (let i = 0; i < events.length; i++) {
       if (events[i].contractId == event.contractId) {
@@ -202,7 +110,7 @@ export default function EventsList() {
         'transactionId': tx,
       }),
     });
-  }, [events, address]);
+  }, [events, walletAccount]);
 
   useEffect(() => {
     setEvents(starknetEvents);
@@ -250,7 +158,7 @@ export default function EventsList() {
             </p>
           )}
           {view === "signedIn" && (
-            <p className="py-6">Connected: {truncateAddress(address)}</p>
+            <p className="py-6">Connected: {truncateAddress(walletAccount.address)}</p>
           )}
         </div>
       </div>

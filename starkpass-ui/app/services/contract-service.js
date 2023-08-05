@@ -1,29 +1,23 @@
-import { getStarknet } from '@argent/get-starknet'
-import { Provider, Contract, Account, constants } from 'starknet'
-
+import { Provider, Contract } from 'starknet'
 import { abi } from '../abi/contractAbi';
 
+import { getConnectedWallet } from './wallet-service';
 
 export const buyTicket = async (
-  accountAddress,
   contractAddress,
 ) => {
-    const provider = new Provider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
-    const privateKey0 = process.env.NEXT_PUBLIC_ACC_KEY;
-    const account0 = new Account(provider, accountAddress, privateKey0);
+    const starknet = await getConnectedWallet();
+    if (!starknet.isConnected) throw Error("starknet wallet not connected");
 
-    if (!starknet.isConnected) {
-        throw Error("starknet wallet not connected")
-    }
-
-    const ourContract = new Contract(abi, contractAddress, provider);
-    ourContract.connect(account0);
+    const eventContract = new Contract(
+        abi,
+        contractAddress,
+        starknet.account,
+    );
     
-    const call = ourContract.populate("mock_buy_ticket");
-    const res = await ourContract.mock_buy_ticket();
-    const tx = await provider.waitForTransaction(res.transaction_hash);
+    const res = await eventContract.mock_buy_ticket();
 
-    console.log('buy transaction: ', tx)
+    console.log('buy transaction: ', res.transaction_hash)
     return tx.transaction_hash;
 }
 
