@@ -2,7 +2,7 @@
 
 ![StarkPass](./starkpass-ui/public/main.png)
 
-StarkPass brings Starknet IRL by letting you buy tickets for your favourite events directly on-chain, using Starknet L2, Argent and Sismo. 
+StarkPass brings Starknet IRL by letting you buy tickets for your favourite events on-chain, using Starknet L2, Argent and Sismo. 
 
 ### For users
 
